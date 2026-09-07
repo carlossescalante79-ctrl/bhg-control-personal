@@ -1,0 +1,16 @@
+{
+  "name": "bhg-control-personal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "vercel": "^37.6.0"
+  }
+}
