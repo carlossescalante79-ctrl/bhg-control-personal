@@ -10,6 +10,227 @@
 @media(max-width:850px){.adminShell{grid-template-columns:1fr}.sidebar{border-right:0;border-bottom:1px solid #1c3731}.sideBrand{display:none}.nav{flex-direction:row;overflow:auto}.nav button{white-space:nowrap}.adminTab{padding:16px}.scheduleCard{grid-template-columns:52px 1fr}.scheduleNote{grid-column:1/3}.c3,.c4,.c6{grid-column:span 12}.payGrid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){header .brand img{width:48px;height:48px}.brand h1{font-size:17px}.formGrid{grid-template-columns:1fr}.full{grid-column:1}.scheduleCard{grid-template-columns:1fr}.scheduleIcon{margin:auto}.scheduleName{text-align:center}.scheduleNote{grid-column:1}.payHero{flex-direction:column;align-items:flex-start}.payHero .net{text-align:left}.payGrid{grid-template-columns:1fr 1fr}}
 @media print{@page{size:A4 portrait;margin:12mm}body *{visibility:hidden!important}.printOnly,.printOnly *{visibility:visible!important}.printOnly{display:block!important;position:absolute!important;left:0;top:0;width:100%;background:#fff;color:#111;font-family:Arial,sans-serif}.prHead{background:#050706;color:#fff;border-bottom:4px solid #ffe600;padding:14px;display:flex;justify-content:space-between;align-items:center}.prHead img{width:100px;height:90px;object-fit:contain}.prHead h1{margin:0;font-size:24px}.prHead p{margin:3px 0;color:#d2d8d6}.prTitle{font-size:27px;margin:18px 0 8px}.prMeta{border:1px solid #aaa;border-radius:10px;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}.prGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}.prBox{border:1px solid #999;padding:10px;border-radius:8px}.prBox span{display:block;color:#555;font-size:10px}.prBox strong{font-size:16px}.prNet{background:#050706;color:#18b77f}.prTable{width:100%;border-collapse:collapse;font-size:10px}.prTable th,.prTable td{border:1px solid #aaa;padding:7px;color:#111;background:#fff}.prTable th{background:#050706;color:#fff}.prFooter{border-top:3px solid #ffe600;margin-top:16px;padding-top:8px;font-size:9px;color:#555}}
+  @media (max-width: 768px){
+
+  main{
+    padding:10px;
+  }
+
+  header{
+    padding:8px 10px;
+    align-items:center;
+  }
+
+  .brand img{
+    width:44px;
+    height:44px;
+  }
+
+  .brand h1{
+    font-size:15px;
+  }
+
+  #clock{
+    font-size:10px;
+    text-align:right;
+  }
+
+  .adminShell{
+    display:block;
+    min-height:auto;
+    border-radius:12px;
+  }
+
+  .sidebar{
+    padding:8px;
+    border-right:0;
+    border-bottom:1px solid #1c3731;
+  }
+
+  .sideBrand{
+    display:none;
+  }
+
+  .nav{
+    display:flex;
+    flex-direction:row;
+    gap:6px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    padding-bottom:4px;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+  }
+
+  .nav button{
+    flex:0 0 auto;
+    white-space:nowrap;
+    padding:10px 12px;
+    font-size:12px;
+    min-height:42px;
+  }
+
+  .adminHead{
+    padding:12px;
+    align-items:flex-start;
+    gap:8px;
+  }
+
+  .adminHead h2{
+    font-size:18px;
+  }
+
+  .adminHead small{
+    font-size:11px;
+  }
+
+  .adminHead .btn{
+    padding:9px 10px;
+    font-size:11px;
+    white-space:nowrap;
+  }
+
+  .adminTab{
+    padding:12px;
+  }
+
+  .sectionTitle h2{
+    font-size:22px;
+  }
+
+  .sectionTitle p{
+    font-size:12px;
+  }
+
+  .grid{
+    display:block;
+  }
+
+  .grid > .panel{
+    margin-bottom:12px;
+  }
+
+  .c3,
+  .c4,
+  .c6,
+  .c12{
+    width:100%;
+  }
+
+  .panel{
+    padding:12px;
+    border-radius:12px;
+  }
+
+  .stat{
+    font-size:28px;
+  }
+
+  .formGrid{
+    display:block;
+  }
+
+  .formGrid > div{
+    margin-bottom:10px;
+  }
+
+  .full{
+    width:100%;
+  }
+
+  input,
+  select,
+  textarea{
+    font-size:16px;
+    min-height:46px;
+  }
+
+  .btn{
+    min-height:42px;
+    padding:10px 12px;
+    font-size:13px;
+  }
+
+  .actions{
+    gap:6px;
+  }
+
+  .actions .btn{
+    flex:1;
+    min-width:100px;
+  }
+
+  .tableWrap{
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    margin-top:10px;
+    border-radius:10px;
+  }
+
+  table{
+    min-width:720px;
+  }
+
+  th,
+  td{
+    white-space:nowrap;
+    padding:9px 7px;
+    font-size:12px;
+  }
+
+  #employeeBody td:first-child,
+  #attendanceBody td:nth-child(2){
+    position:sticky;
+    left:0;
+    background:#0a1916;
+    z-index:1;
+  }
+
+  .scheduleCard{
+    display:block;
+    padding:12px;
+  }
+
+  .scheduleIcon{
+    margin:0 auto 10px;
+  }
+
+  .scheduleName{
+    text-align:center;
+    margin-bottom:10px;
+  }
+
+  .scheduleNote{
+    margin-top:10px;
+  }
+
+  .totals{
+    grid-template-columns:1fr;
+  }
+
+  .payHero{
+    display:block;
+  }
+
+  .payHero .net{
+    text-align:left;
+    margin-top:12px;
+  }
+
+  .payGrid{
+    grid-template-columns:1fr;
+  }
+
+  .qrBox{
+    max-width:100%;
+  }
+
+  .qrBox img{
+    max-width:280px;
+    margin:auto;
+  }
+}
 </style>
 </head>
 <body>
