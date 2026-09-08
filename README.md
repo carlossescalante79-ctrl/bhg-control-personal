@@ -27,3 +27,4 @@ Imprímelo una sola vez y pégalo en el taller.
 
 ## Cámara
 La cámara funciona al estar publicado por HTTPS (Vercel). La foto se comprime en el navegador y se guarda en Neon como evidencia.
+Prueba de conexión GitHub - Vercel
