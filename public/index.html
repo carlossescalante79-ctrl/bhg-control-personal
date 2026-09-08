@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BHG Control de Personal</title>
+<style>
+:root{--bg:#06100e;--panel:#0a1916;--panel2:#071411;--line:#23463e;--text:#f5f8f7;--muted:#9eb3ad;--green:#14c89a;--yellow:#fff000;--red:#ff6262;--blue:#45a6ff;--purple:#b779ff}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(150deg,#030706,#081713);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif;min-height:100vh}button,input,select,textarea{font:inherit}button{cursor:pointer}header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:#030605;border-bottom:2px solid var(--yellow)}.brand{display:flex;gap:11px;align-items:center}.brand img{width:64px;height:64px;object-fit:contain;border-radius:8px}.brand h1{margin:0;font-size:20px}.yellow{color:var(--yellow)}small,.muted{color:var(--muted)}main{max-width:1180px;margin:auto;padding:18px}.card,.panel{background:rgba(10,25,22,.96);border:1px solid var(--line);border-radius:16px;padding:18px}.hidden{display:none!important}.terminal{max-width:560px;margin:auto;text-align:center}.terminal .heroLogo{width:min(280px,80%);display:block;margin:0 auto 10px}.terminal h2{font-size:30px;margin:6px 0}.field{text-align:left;margin-top:14px}.field label,label{display:block;color:var(--muted);font-size:13px;margin:8px 0 6px}input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#061512;color:#fff;outline:none}input:focus,select:focus,textarea:focus{border-color:var(--yellow)}.btn{border:1px solid var(--line);background:#0a201b;color:#fff;border-radius:11px;padding:12px 15px;font-weight:800}.btn.yellow{background:var(--yellow);color:#111;border-color:var(--yellow)}.btn.green{background:var(--green);color:#032018;border-color:var(--green)}.btn.red{border-color:var(--red);color:#ff8b8b}.btn.big{width:100%;min-height:64px;font-size:18px}.note{margin-top:12px;padding:12px;border-radius:10px;background:#061411;color:var(--muted);text-align:left}.ok{color:#55e1b8}.err{color:#ff8d8d}.moveBox{margin:18px 0;padding:18px;border:1px solid var(--line);border-radius:14px;background:#071713}.moveIcon{font-size:45px}.camera{border:1px dashed var(--line);border-radius:12px;padding:10px;margin:12px 0}.camera video,.camera canvas{width:100%;max-height:250px;object-fit:cover;border-radius:10px;background:#020403}.camera canvas{display:none}
+.adminShell{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:800px;border:1px solid #1f3b35;border-radius:18px;overflow:hidden;background:#07100f}.sidebar{background:#061411;border-right:1px solid #1c3731;padding:16px 12px;display:flex;flex-direction:column}.sideBrand{padding:8px 8px 18px;border-bottom:1px solid #18332d;margin-bottom:12px}.sideBrand strong{font-size:18px}.sideBrand span{display:block;color:var(--yellow);font-size:12px;letter-spacing:2px;font-weight:900}.nav{display:flex;flex-direction:column;gap:5px}.nav button{border:0;background:transparent;color:#d8e2df;text-align:left;padding:12px;border-radius:10px}.nav button.active{background:#0a493a;color:#20d4a2}.adminMain{min-width:0}.adminHead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:20px 26px;border-bottom:1px solid #19352e}.adminHead h2{margin:0}.adminTab{padding:26px}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.c3{grid-column:span 3}.c4{grid-column:span 4}.c6{grid-column:span 6}.c12{grid-column:span 12}.stat{font-size:30px;font-weight:900;color:var(--yellow);margin-top:5px}.sectionTitle h2{margin:0}.sectionTitle p{color:var(--muted);margin-top:6px}.scheduleCard{display:grid;grid-template-columns:60px 1.3fr .8fr .7fr;gap:14px;align-items:center;border:1px solid #2a4d45;border-radius:14px;padding:16px;margin:12px 0;background:#091714}.scheduleIcon{width:52px;height:52px;border-radius:50%;border:1px solid currentColor;display:grid;place-items:center;font-size:24px}.scheduleName strong{display:block;font-size:17px}.scheduleName span{color:var(--muted);font-size:13px}.entry{color:#24d89e}.foodOut{color:#ffd400}.foodIn{color:#45a6ff}.exit{color:#bb7aff}.scheduleNote{grid-column:2/5;padding:10px 12px;border-radius:8px;font-size:13px;background:#07110f}.saveWide{width:100%;margin-top:10px}.formGrid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.full{grid-column:1/-1}.tableWrap{overflow:auto;margin-top:16px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}th{color:var(--yellow)}.badge{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:900}.badge.ok{background:#0c3a2c}.badge.late{background:#40181b}.actions{display:flex;gap:8px;flex-wrap:wrap}.totals{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.totalBox{border:1px solid var(--line);border-radius:12px;padding:14px;background:#061411}.totalBox strong{display:block;font-size:23px;margin-top:4px}.payHero{display:flex;justify-content:space-between;gap:18px;align-items:center;border:1px solid var(--line);border-radius:15px;padding:18px;margin-top:16px}.payHero .net{text-align:right}.payHero .net strong{display:block;color:var(--yellow);font-size:32px}.payGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}.payBox{border:1px solid var(--line);border-radius:12px;padding:14px}.payBox strong{display:block;font-size:22px;margin-top:5px}.qrBox{max-width:340px;background:#fff;border-radius:14px;padding:16px;margin-top:12px}.qrBox img{width:100%;display:block}.photoModal{position:fixed;inset:0;background:rgba(0,0,0,.82);display:grid;place-items:center;padding:20px;z-index:20}.photoModal .inner{max-width:620px;width:100%;background:#0a1916;border:1px solid var(--line);border-radius:14px;padding:14px}.photoModal img{width:100%;max-height:70vh;object-fit:contain;background:#000;border-radius:10px}.printOnly{display:none}
+@media(max-width:850px){.adminShell{grid-template-columns:1fr}.sidebar{border-right:0;border-bottom:1px solid #1c3731}.sideBrand{display:none}.nav{flex-direction:row;overflow:auto}.nav button{white-space:nowrap}.adminTab{padding:16px}.scheduleCard{grid-template-columns:52px 1fr}.scheduleNote{grid-column:1/3}.c3,.c4,.c6{grid-column:span 12}.payGrid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){header .brand img{width:48px;height:48px}.brand h1{font-size:17px}.formGrid{grid-template-columns:1fr}.full{grid-column:1}.scheduleCard{grid-template-columns:1fr}.scheduleIcon{margin:auto}.scheduleName{text-align:center}.scheduleNote{grid-column:1}.payHero{flex-direction:column;align-items:flex-start}.payHero .net{text-align:left}.payGrid{grid-template-columns:1fr 1fr}}
+@media print{@page{size:A4 portrait;margin:12mm}body *{visibility:hidden!important}.printOnly,.printOnly *{visibility:visible!important}.printOnly{display:block!important;position:absolute!important;left:0;top:0;width:100%;background:#fff;color:#111;font-family:Arial,sans-serif}.prHead{background:#050706;color:#fff;border-bottom:4px solid #ffe600;padding:14px;display:flex;justify-content:space-between;align-items:center}.prHead img{width:100px;height:90px;object-fit:contain}.prHead h1{margin:0;font-size:24px}.prHead p{margin:3px 0;color:#d2d8d6}.prTitle{font-size:27px;margin:18px 0 8px}.prMeta{border:1px solid #aaa;border-radius:10px;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}.prGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}.prBox{border:1px solid #999;padding:10px;border-radius:8px}.prBox span{display:block;color:#555;font-size:10px}.prBox strong{font-size:16px}.prNet{background:#050706;color:#18b77f}.prTable{width:100%;border-collapse:collapse;font-size:10px}.prTable th,.prTable td{border:1px solid #aaa;padding:7px;color:#111;background:#fff}.prTable th{background:#050706;color:#fff}.prFooter{border-top:3px solid #ffe600;margin-top:16px;padding-top:8px;font-size:9px;color:#555}}
+  @media (max-width: 768px){
+
+  main{
+    padding:10px;
+  }
+
+  header{
+    padding:8px 10px;
+    align-items:center;
+  }
+
+  .brand img{
+    width:44px;
+    height:44px;
+  }
+
+  .brand h1{
+    font-size:15px;
+  }
+
+  #clock{
+    font-size:10px;
+    text-align:right;
+  }
+
+  .adminShell{
+    display:block;
+    min-height:auto;
+    border-radius:12px;
+  }
+
+  .sidebar{
+    padding:8px;
+    border-right:0;
+    border-bottom:1px solid #1c3731;
+  }
+
+  .sideBrand{
+    display:none;
+  }
+
+  .nav{
+    display:flex;
+    flex-direction:row;
+    gap:6px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    padding-bottom:4px;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+  }
+
+  .nav button{
+    flex:0 0 auto;
+    white-space:nowrap;
+    padding:10px 12px;
+    font-size:12px;
+    min-height:42px;
+  }
+
+  .adminHead{
+    padding:12px;
+    align-items:flex-start;
+    gap:8px;
+  }
+
+  .adminHead h2{
+    font-size:18px;
+  }
+
+  .adminHead small{
+    font-size:11px;
+  }
+
+  .adminHead .btn{
+    padding:9px 10px;
+    font-size:11px;
+    white-space:nowrap;
+  }
+
+  .adminTab{
+    padding:12px;
+  }
+
+  .sectionTitle h2{
+    font-size:22px;
+  }
+
+  .sectionTitle p{
+    font-size:12px;
+  }
+
+  .grid{
+    display:block;
+  }
+
+  .grid > .panel{
+    margin-bottom:12px;
+  }
+
+  .c3,
+  .c4,
+  .c6,
+  .c12{
+    width:100%;
+  }
+
+  .panel{
+    padding:12px;
+    border-radius:12px;
+  }
+
+  .stat{
+    font-size:28px;
+  }
+
+  .formGrid{
+    display:block;
+  }
+
+  .formGrid > div{
+    margin-bottom:10px;
+  }
+
+  .full{
+    width:100%;
+  }
+
+  input,
+  select,
+  textarea{
+    font-size:16px;
+    min-height:46px;
+  }
+
+  .btn{
+    min-height:42px;
+    padding:10px 12px;
+    font-size:13px;
+  }
+
+  .actions{
+    gap:6px;
+  }
+
+  .actions .btn{
+    flex:1;
+    min-width:100px;
+  }
+
+  .tableWrap{
+    width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    margin-top:10px;
+    border-radius:10px;
+  }
+
+  table{
+    min-width:720px;
+  }
+
+  th,
+  td{
+    white-space:nowrap;
+    padding:9px 7px;
+    font-size:12px;
+  }
+
+  #employeeBody td:first-child,
+  #attendanceBody td:nth-child(2){
+    position:sticky;
+    left:0;
+    background:#0a1916;
+    z-index:1;
+  }
+
+  .scheduleCard{
+    display:block;
+    padding:12px;
+  }
+
+  .scheduleIcon{
+    margin:0 auto 10px;
+  }
+
+  .scheduleName{
+    text-align:center;
+    margin-bottom:10px;
+  }
+
+  .scheduleNote{
+    margin-top:10px;
+  }
+
+  .totals{
+    grid-template-columns:1fr;
+  }
+
+  .payHero{
+    display:block;
+  }
+
+  .payHero .net{
+    text-align:left;
+    margin-top:12px;
+  }
+
+  .payGrid{
+    grid-template-columns:1fr;
+  }
+
+  .qrBox{
+    max-width:100%;
+  }
+
+  .qrBox img{
+    max-width:280px;
+    margin:auto;
+  }
+}
+/* ===== ADMIN MOVIL BHG ===== */
+@media (max-width:768px){
+main{padding:8px;width:100%}
+header{padding:8px 10px;align-items:center}
+header .brand img{width:44px;height:44px}.brand h1{font-size:15px;line-height:1.15}#clock{font-size:10px;text-align:right;max-width:125px}
+.adminShell{display:block;width:100%;min-height:auto;border-radius:12px;overflow:hidden}
+.sidebar{padding:10px;border-right:0;border-bottom:1px solid #1c3731}.sideBrand{display:none}
+.nav{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px;overflow:visible!important;width:100%;padding:0}
+.nav button{width:100%;min-width:0;white-space:normal!important;text-align:left;font-size:12px;line-height:1.2;padding:10px 9px;min-height:44px}
+.adminHead{flex-direction:column;align-items:stretch;padding:14px;gap:8px}.adminHead h2{font-size:20px}.adminHead small{font-size:11px}#logoutBtn{width:100%;margin-top:4px}
+.adminTab{padding:12px}.sectionTitle h2{font-size:22px}.sectionTitle p{font-size:12px}
+.grid{display:block}.grid>.panel{margin-bottom:12px}.c3,.c4,.c6,.c12{width:100%}
+#tab-resumen .grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px}
+#tab-resumen .panel{margin:0;min-height:110px;padding:14px}#tab-resumen .stat{font-size:30px}
+.panel{padding:12px;border-radius:12px}.formGrid{display:block!important}.formGrid>div{margin-bottom:10px}.full{width:100%}
+input,select,textarea{font-size:16px;min-height:46px}.btn{min-height:42px;padding:10px 12px;font-size:13px}
+.actions{gap:6px}.actions .btn{min-width:100px}
+.tableWrap{width:100%;overflow-x:auto!important;-webkit-overflow-scrolling:touch;margin-top:10px;border-radius:10px}
+table{min-width:700px}th,td{white-space:nowrap;padding:9px 7px;font-size:12px}
+#employeeBody td:first-child,#attendanceBody td:nth-child(2){position:sticky;left:0;background:#0a1916;z-index:1}
+.scheduleCard{display:block!important;padding:12px}.scheduleCard>div{margin-bottom:10px}.scheduleIcon{margin:0 auto 10px}.scheduleName{text-align:center}.scheduleNote{margin-top:10px}
+.totals{grid-template-columns:1fr}.payHero{display:block}.payHero .net{text-align:left;margin-top:12px}.payGrid{grid-template-columns:1fr 1fr!important}
+.qrBox{max-width:100%}.qrBox img{max-width:280px;margin:auto}
+}
+</style>
+</head>
+<body>
+<header><div class="brand"><img src="/bhg_logo.jpg" alt="BHG"><div><h1><span class="yellow">BHG</span> Control de Personal</h1><small id="modeLabel">Terminal de asistencia</small></div></div><small id="clock"></small></header>
+<main>
+<section id="loginView" class="card terminal">
+  <img class="heroLogo" src="/bhg_logo.jpg" alt="Black Hawks Garage">
+  <h2 id="loginTitle">Terminal BHG</h2><small id="loginSubtitle">Empleado o administrador: ingresa tu PIN</small>
+  <div class="field"><label>PIN</label><input id="pinInput" inputmode="numeric" maxlength="6" placeholder="••••" autocomplete="off"></div>
+  <button id="continueBtn" class="btn yellow big" style="margin-top:14px">CONTINUAR</button>
+  <div id="loginMsg" class="note">Ingresa tu PIN para continuar.</div>
+</section>
+
+<section id="employeeView" class="card terminal hidden">
+  <img class="heroLogo" src="/bhg_logo.jpg" alt="BHG"><small>Empleado identificado</small><h2 id="empName">—</h2><small id="empRole">—</small>
+  <div class="moveBox"><small>TU SIGUIENTE MOVIMIENTO</small><div class="moveIcon" id="moveIcon">🟢</div><h2 id="moveName">ENTRADA LABORAL</h2></div>
+  <div class="camera"><video id="video" playsinline muted></video><canvas id="canvas"></canvas><small>Se tomará una foto como evidencia al registrar.</small></div>
+  <button id="registerBtn" class="btn green big">REGISTRAR</button><button id="cancelBtn" class="btn big" style="margin-top:8px">Cancelar</button>
+  <div id="empMsg" class="note">Confirma para registrar.</div>
+</section>
+
+<section id="successView" class="card terminal hidden"><div style="font-size:54px">✅</div><h2>Registro exitoso</h2><p id="successText"></p><div class="note" id="successMeta"></div><button id="backBtn" class="btn yellow big" style="margin-top:14px">VOLVER A TERMINAL</button></section>
+
+<section id="adminView" class="hidden">
+<div class="adminShell">
+<aside class="sidebar"><div class="sideBrand"><strong>BHG CONTROL</strong><span>BLACK HAWKS GARAGE</span></div><nav class="nav">
+<button class="active" data-tab="resumen">▦ Resumen</button><button data-tab="registros">▣ Registros</button><button data-tab="empleados">♙ Empleados</button><button data-tab="horarios">◷ Horarios</button><button data-tab="incidencias">△ Incidencias</button><button data-tab="ajustes">▤ Descuentos / Bonos</button><button data-tab="cortes">▣ Cortes de pago</button><button data-tab="qr">▦ QR fijo</button>
+</nav></aside>
+<div class="adminMain"><div class="adminHead"><div><h2><span class="yellow">BHG</span> Control de Personal</h2><small>Panel de administrador</small></div><button id="logoutBtn" class="btn red">Cerrar sesión</button></div>
+
+<div id="tab-resumen" class="adminTab"><div class="sectionTitle"><h2>Resumen</h2><p>Estado general del personal.</p></div><div class="grid"><div class="panel c3"><small>Empleados activos</small><div class="stat" id="stEmployees">0</div></div><div class="panel c3"><small>Entradas hoy</small><div class="stat" id="stEntries">0</div></div><div class="panel c3"><small>Retardos hoy</small><div class="stat" id="stLate">0</div></div><div class="panel c3"><small>En comida</small><div class="stat" id="stFood">0</div></div></div></div>
+
+<div id="tab-registros" class="adminTab hidden"><div class="sectionTitle"><h2>Registros</h2><p>Historial de entradas, comida y salidas.</p></div><div class="panel"><div class="tableWrap"><table><thead><tr><th>Fecha/Hora</th><th>Empleado</th><th>Movimiento</th><th>Estatus</th><th>Método</th><th>Foto</th><th>Acciones</th></tr></thead><tbody id="attendanceBody"></tbody></table></div></div></div>
+
+<div id="tab-empleados" class="adminTab hidden"><div class="sectionTitle"><h2>Empleados</h2><p>Alta, edición, sueldo y estatus.</p></div><div class="grid"><div class="panel c6"><form id="employeeForm" class="formGrid"><div><label>Nombre</label><input id="newName" required></div><div><label>Puesto</label><input id="newRole"></div><div><label>Tipo de pago</label><select id="newPayType"><option>Semanal</option><option>Quincenal</option></select></div><div><label>Sueldo base</label><input id="newSalary" type="number" min="0" step="0.01" required></div><div><label>PIN</label><input id="newPin" inputmode="numeric" maxlength="6" required></div><div class="full actions"><button id="employeeSubmit" class="btn green" style="flex:1">Agregar empleado</button><button id="employeeCancelEdit" type="button" class="btn hidden">Cancelar edición</button></div></form><div id="employeeMsg" class="note">El PIN debe tener de 4 a 6 números.</div></div><div class="panel c6"><div class="tableWrap"><table><thead><tr><th>Empleado</th><th>Puesto</th><th>Pago</th><th>Sueldo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="employeeBody"></tbody></table></div></div></div></div>
+
+<div id="tab-horarios" class="adminTab hidden"><div class="sectionTitle"><h2>Configuración de horarios</h2><p>Horarios y tolerancias por movimiento.</p></div><div class="panel">
+<div class="scheduleCard entry"><div class="scheduleIcon">↪</div><div class="scheduleName"><strong>Entrada laboral</strong><span>Inicio de jornada</span></div><div><label>Hora</label><input id="workStart" type="time"></div><div><label>Tolerancia</label><select id="workTol"><option value="0">0 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div><div class="scheduleNote">A TIEMPO o RETARDO automáticamente.</div></div>
+<div class="scheduleCard foodOut"><div class="scheduleIcon">🍴</div><div class="scheduleName"><strong>Salida comida</strong><span>Inicio de comida</span></div><div><label>Hora</label><input id="foodOut" type="time"></div><div><label>Tolerancia</label><select id="foodOutTol"><option value="0">0 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div><div class="scheduleNote">Registra el inicio del tiempo de comida.</div></div>
+<div class="scheduleCard foodIn"><div class="scheduleIcon">☕</div><div class="scheduleName"><strong>Entrada comida</strong><span>Regreso de comida</span></div><div><label>Hora</label><input id="foodIn" type="time"></div><div><label>Tolerancia</label><select id="foodInTol"><option value="0">0 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div><div class="scheduleNote">A TIEMPO o RETARDO automáticamente.</div></div>
+<div class="scheduleCard exit"><div class="scheduleIcon">↗</div><div class="scheduleName"><strong>Salida laboral</strong><span>Fin de jornada</span></div><div><label>Hora</label><input id="workEnd" type="time"></div><div><label>Tolerancia</label><select id="workEndTol"><option value="0">0 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div><div class="scheduleNote">Salida final del día.</div></div>
+<button id="saveSchedule" class="btn green saveWide">Guardar horarios</button><div id="scheduleMsg" class="note">—</div><hr style="border-color:var(--line);margin:18px 0"><label>Nuevo PIN administrador</label><input id="adminPin" inputmode="numeric" maxlength="6"><button id="saveAdminPin" class="btn yellow" style="margin-top:10px">Cambiar PIN admin</button></div></div>
+
+<div id="tab-incidencias" class="adminTab hidden"><div class="sectionTitle"><h2>Incidencias</h2><p>Faltas, permisos, incapacidades y observaciones.</p></div><div class="panel"><form id="incidentForm" class="formGrid"><div><label>Empleado</label><select id="incidentEmployee"></select></div><div><label>Fecha</label><input id="incidentDate" type="date"></div><div><label>Tipo</label><select id="incidentType"><option>Falta</option><option>Permiso</option><option>Incapacidad</option><option>Salida anticipada</option><option>Olvidó registrar</option><option>Otro</option></select></div><div><label>Justificada</label><select id="incidentJust"><option value="true">Sí</option><option value="false">No</option></select></div><div class="full"><label>Observaciones</label><textarea id="incidentNotes" rows="3"></textarea></div><div class="full"><button class="btn green">Guardar incidencia</button></div></form><div class="tableWrap"><table><thead><tr><th>Fecha</th><th>Empleado</th><th>Tipo</th><th>Justificada</th><th>Observaciones</th></tr></thead><tbody id="incidentBody"></tbody></table></div></div></div>
+
+<div id="tab-ajustes" class="adminTab hidden"><div class="sectionTitle"><h2>Descuentos / Bonos</h2><p>Movimientos económicos con historial.</p></div><div class="panel"><form id="adjustForm" class="formGrid"><div><label>Empleado</label><select id="adjustEmployee"></select></div><div><label>Fecha</label><input id="adjustDate" type="date"></div><div><label>Tipo</label><select id="adjustType"><option>Descuento</option><option>Bono</option></select></div><div><label>Monto</label><input id="adjustAmount" type="number" min="0" step="0.01"></div><div class="full"><label>Motivo</label><input id="adjustReason"></div><div class="full"><label>Observaciones</label><textarea id="adjustNotes" rows="3"></textarea></div><div class="full"><button class="btn green">Guardar movimiento</button></div></form><div class="totals"><div class="totalBox"><small>Bonos acumulados</small><strong class="ok" id="bonusTotal">$0.00</strong></div><div class="totalBox"><small>Descuentos acumulados</small><strong class="err" id="discountTotal">$0.00</strong></div></div><div class="tableWrap"><table><thead><tr><th>Fecha</th><th>Empleado</th><th>Tipo</th><th>Monto</th><th>Motivo</th></tr></thead><tbody id="adjustBody"></tbody></table></div></div></div>
+
+<div id="tab-cortes" class="adminTab hidden"><div class="sectionTitle"><h2>Corte de pago</h2><p>Calcula, guarda e imprime el corte del empleado.</p></div><div class="panel"><div class="formGrid"><div><label>Empleado</label><select id="payEmployee"></select></div><div><label>Tipo de periodo</label><select id="payType"><option>Semanal</option><option>Quincenal</option></select></div><div><label>Inicio</label><input id="payStart" type="date"></div><div><label>Fin</label><input id="payEnd" type="date"></div><div><label>Fecha de pago</label><input id="payDate" type="date"></div><div><label>Sueldo base</label><input id="paySalary" type="number" readonly></div><div class="full"><button id="calculatePay" class="btn green" style="width:100%">Calcular corte</button></div></div></div><div id="payResult" class="hidden"><div class="payHero"><div><small>Empleado</small><h2 id="payName">—</h2><span class="muted" id="payPeriod">—</span></div><div class="net"><small>Total a pagar</small><strong id="payNet">$0.00</strong></div></div><div class="payGrid"><div class="payBox"><small>Sueldo base</small><strong id="payBase">$0.00</strong></div><div class="payBox"><small>Bonos</small><strong class="ok" id="payBonus">$0.00</strong></div><div class="payBox"><small>Descuentos</small><strong class="err" id="payDiscount">$0.00</strong></div><div class="payBox"><small>Retardos</small><strong id="payLate">0</strong></div></div><div class="actions" style="margin-top:14px"><button id="savePay" class="btn green">Guardar corte</button><button id="printPay" class="btn yellow">Imprimir / Guardar PDF</button></div></div><div class="panel" style="margin-top:14px"><h3>Historial de cortes</h3><div class="tableWrap"><table><thead><tr><th>Fecha</th><th>Empleado</th><th>Periodo</th><th>Total</th></tr></thead><tbody id="cutsBody"></tbody></table></div></div></div>
+
+<div id="tab-qr" class="adminTab hidden"><div class="sectionTitle"><h2>QR fijo del taller</h2><p>Imprime este QR una sola vez y pégalo en el taller.</p></div><div class="panel"><div class="qrBox"><img src="/api/qr" alt="QR fijo BHG"></div><div class="note">Este QR abre <b>/registro</b>. La terminal fija abre <b>/terminal</b>.</div></div></div>
+</div></div>
+</section>
+
+<section id="printReport" class="printOnly"><div class="prHead"><img src="/bhg_logo.jpg"><div><h1>BHG Control de Personal</h1><p>Black Hawks Garage</p></div><div><b>CORTE DE PAGO</b><p id="prPaymentDate"></p></div></div><h2 class="prTitle">Resumen de periodo</h2><div class="prMeta"><div><b>Empleado:</b> <span id="prName"></span></div><div><b>Periodo:</b> <span id="prPeriod"></span></div><div><b>Tipo de pago:</b> <span id="prType"></span></div><div><b>Fecha de pago:</b> <span id="prDate"></span></div></div><div class="prGrid"><div class="prBox"><span>Sueldo base</span><strong id="prBase"></strong></div><div class="prBox"><span>Bonos</span><strong id="prBonus"></strong></div><div class="prBox"><span>Descuentos</span><strong id="prDiscount"></strong></div><div class="prBox prNet"><span>Total a pagar</span><strong id="prNet"></strong></div></div><table class="prTable"><tbody><tr><th>Entradas registradas</th><td id="prEntries"></td></tr><tr><th>Retardos</th><td id="prLate"></td></tr><tr><th>Incidencias</th><td id="prInc"></td></tr><tr><th>Bonos</th><td id="prBonus2"></td></tr><tr><th>Descuentos</th><td id="prDiscount2"></td></tr><tr><th>Total a pagar</th><td id="prNet2"></td></tr></tbody></table><div class="prFooter">Documento generado electrónicamente por BHG Control de Personal</div></section>
+</main>
+<div id="photoModal" class="photoModal hidden"><div class="inner"><div class="actions" style="justify-content:flex-end"><button id="closePhoto" class="btn">Cerrar</button></div><img id="photoImg" alt="Evidencia"></div></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id), mode=(location.pathname==='/registro'||new URLSearchParams(location.search).get('mode')==='qr')?'QR':'Terminal';
+let state={admin:null,employee:null,next:null,data:null,currentPayroll:null,editingEmployeeId:null};
+const money=n=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(Number(n||0));
+const dISO=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const movementIcon=m=>m==='Entrada laboral'?'🟢':m==='Salida comida'?'🍴':m==='Entrada comida'?'↩️':'🔴';
+function tick(){$('clock').textContent=new Intl.DateTimeFormat('es-MX',{dateStyle:'medium',timeStyle:'medium'}).format(new Date())}tick();setInterval(tick,1000);
+$('modeLabel').textContent=mode==='QR'?'Registro por QR':'Terminal de asistencia';$('loginTitle').textContent=mode==='QR'?'Registro por QR':'Terminal BHG';$('loginSubtitle').textContent=mode==='QR'?'Escaneaste el QR fijo del taller':'Empleado o administrador: ingresa tu PIN';
+function show(id){['loginView','employeeView','successView','adminView'].forEach(x=>$(x).classList.add('hidden'));$(id).classList.remove('hidden')}
+async function api(url,opt={}){const r=await fetch(url,{headers:{'Content-Type':'application/json',...(opt.headers||{})},...opt});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Error');return j}
+$('continueBtn').onclick=async()=>{const pin=$('pinInput').value.trim();$('loginMsg').textContent='Validando…';try{const r=await api('/api/auth',{method:'POST',body:JSON.stringify({pin})});$('pinInput').value='';if(r.role==='admin'){await openAdmin();return}state.employee={...r.employee,pin};state.next=r.next;if(!r.next){$('loginMsg').innerHTML='<span class="err">Tu jornada de hoy ya terminó.</span>';return}renderEmployee();show('employeeView')}catch(e){$('loginMsg').innerHTML='<span class="err">'+e.message+'</span>'}};
+function renderEmployee(){$('empName').textContent=state.employee.name;$('empRole').textContent=state.employee.role||'Empleado';$('moveIcon').textContent=movementIcon(state.next);$('moveName').textContent=state.next.toUpperCase();$('empMsg').textContent='Confirma para registrar '+state.next+'.';$('canvas').style.display='none';$('video').style.display='block'}
+async function photo(){try{const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});const v=$('video'),c=$('canvas');v.srcObject=st;await v.play();await new Promise(r=>setTimeout(r,450));const max=480,scale=Math.min(1,max/(v.videoWidth||640));c.width=Math.round((v.videoWidth||640)*scale);c.height=Math.round((v.videoHeight||480)*scale);c.getContext('2d').drawImage(v,0,0,c.width,c.height);st.getTracks().forEach(t=>t.stop());v.style.display='none';c.style.display='block';return c.toDataURL('image/jpeg',.55)}catch{return ''}}
+$('registerBtn').onclick=async()=>{$('empMsg').textContent='Tomando evidencia y registrando…';const p=await photo();try{const r=await api('/api/attendance',{method:'POST',body:JSON.stringify({pin:state.employee.pin,method:mode,photo:p})});$('successText').textContent=r.employee+' — '+r.record.movement;$('successMeta').textContent=(r.record.status?('Estatus: '+r.record.status+' · '):'')+new Date(r.record.registered_at).toLocaleString('es-MX');show('successView')}catch(e){$('empMsg').innerHTML='<span class="err">'+e.message+'</span>'}};
+$('cancelBtn').onclick=()=>show('loginView');$('backBtn').onclick=()=>show('loginView');
+$('logoutBtn').onclick=async()=>{await api('/api/auth',{method:'DELETE'});state.data=null;show('loginView')};
+async function openAdmin(){show('adminView');await loadAdmin();}
+async function loadAdmin(){try{state.data=await api('/api/admin');renderAdmin()}catch(e){alert(e.message);show('loginView')}}
+function fillSelect(id){const s=$(id);s.innerHTML='';state.data.employees.filter(e=>e.active).forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;s.appendChild(o)})}
+function renderAdmin(){const d=state.data, today=new Date().toLocaleDateString('es-MX');$('stEmployees').textContent=d.employees.filter(x=>x.active).length;$('stEntries').textContent=d.attendance.filter(x=>new Date(x.registered_at).toLocaleDateString('es-MX')===today&&x.movement==='Entrada laboral').length;$('stLate').textContent=d.attendance.filter(x=>new Date(x.registered_at).toLocaleDateString('es-MX')===today&&x.status==='RETARDO').length;const latest={};d.attendance.forEach(x=>{if(!latest[x.employee_id])latest[x.employee_id]=x.movement});$('stFood').textContent=Object.values(latest).filter(x=>x==='Salida comida').length;
+const s=d.settings;$('workStart').value=String(s.work_start).slice(0,5);$('workTol').value=s.work_tolerance;$('foodOut').value=String(s.food_out).slice(0,5);$('foodOutTol').value=s.food_out_tolerance;$('foodIn').value=String(s.food_in).slice(0,5);$('foodInTol').value=s.food_in_tolerance;$('workEnd').value=String(s.work_end).slice(0,5);$('workEndTol').value=s.work_end_tolerance;
+$('employeeBody').innerHTML=d.employees.map(e=>`<tr><td>${e.name}</td><td>${e.role||'—'}</td><td>${e.pay_type}</td><td>${money(e.salary)}</td><td><button class="btn ${e.active?'red':'green'}" data-toggle="${e.id}" data-active="${!e.active}">${e.active?'Desactivar':'Activar'}</button></td><td><div class="actions"><button class="btn" data-edit-employee="${e.id}">Editar</button><button class="btn red" data-delete-employee="${e.id}">Eliminar</button></div></td></tr>`).join('')||'<tr><td colspan="6">Sin empleados</td></tr>';
+$('attendanceBody').innerHTML=d.attendance.map(r=>`<tr><td>${new Date(r.registered_at).toLocaleString('es-MX')}</td><td>${r.name}</td><td>${r.movement}</td><td>${r.status?`<span class="badge ${r.status==='A TIEMPO'?'ok':'late'}">${r.status}</span>`:'—'}</td><td>${r.method}</td><td>${r.photo_data?`<button class="btn" data-photo="${r.id}">Ver foto</button>`:'—'}</td><td><button class="btn red" data-delete-attendance="${r.id}">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="7">Sin registros</td></tr>';
+$('incidentBody').innerHTML=d.incidents.map(r=>`<tr><td>${String(r.incident_date).slice(0,10)}</td><td>${r.name}</td><td>${r.type}</td><td>${r.justified?'Sí':'No'}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="5">Sin incidencias</td></tr>';
+$('adjustBody').innerHTML=d.adjustments.map(r=>`<tr><td>${String(r.adjust_date).slice(0,10)}</td><td>${r.name}</td><td>${r.type}</td><td>${money(r.amount)}</td><td>${r.reason}</td></tr>`).join('')||'<tr><td colspan="5">Sin movimientos</td></tr>';
+$('bonusTotal').textContent=money(d.adjustments.filter(x=>x.type==='Bono').reduce((a,x)=>a+Number(x.amount),0));$('discountTotal').textContent=money(d.adjustments.filter(x=>x.type==='Descuento').reduce((a,x)=>a+Number(x.amount),0));$('cutsBody').innerHTML=d.cuts.map(r=>`<tr><td>${new Date(r.created_at).toLocaleString('es-MX')}</td><td>${r.name}</td><td>${r.period_type} · ${String(r.start_date).slice(0,10)} a ${String(r.end_date).slice(0,10)}</td><td>${money(r.net_pay)}</td></tr>`).join('')||'<tr><td colspan="4">Sin cortes</td></tr>';
+['incidentEmployee','adjustEmployee','payEmployee'].forEach(fillSelect);applyPayDefaults();bindDynamic()}
+function bindDynamic(){
+document.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async()=>{await adminPost({action:'employee.toggle',id:Number(b.dataset.toggle),active:b.dataset.active==='true'});await loadAdmin()});
+document.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{const r=state.data.attendance.find(x=>x.id==b.dataset.photo);if(!r)return;$('photoImg').src=r.photo_data;$('photoModal').classList.remove('hidden')});
+}
+
+$('attendanceBody').onclick=async e=>{
+  const b=e.target.closest('[data-delete-attendance]');
+  if(!b)return;
+
+  const id=Number(b.getAttribute('data-delete-attendance'));
+  const r=state.data?.attendance?.find(x=>Number(x.id)===id);
+
+  if(!r){
+    alert('No se encontró el registro.');
+    return;
+  }
+
+  const ok=confirm(
+    `¿Seguro que deseas eliminar este registro?\n\n`+
+    `${r.name}\n${r.movement}\n`+
+    `${new Date(r.registered_at).toLocaleString('es-MX')}\n\n`+
+    `También se eliminará la foto de evidencia. Esta acción no se puede deshacer.`
+  );
+
+  if(!ok)return;
+
+  try{
+    b.disabled=true;
+    b.textContent='Eliminando…';
+    await adminPost({action:'attendance.delete',id});
+    await loadAdmin();
+    alert('Registro eliminado correctamente.');
+  }catch(err){
+    alert('No se pudo eliminar: '+err.message);
+    b.disabled=false;
+    b.textContent='Eliminar';
+  }
+};
+$('closePhoto').onclick=()=>$('photoModal').classList.add('hidden');
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.adminTab').forEach(x=>x.classList.add('hidden'));$('tab-'+b.dataset.tab).classList.remove('hidden')});
+async function adminPost(body){return api('/api/admin',{method:'POST',body:JSON.stringify(body)})}
+function resetEmployeeForm(){
+  state.editingEmployeeId=null;
+  $('employeeForm').reset();
+  $('newPin').required=true;
+  $('newPin').placeholder='';
+  $('employeeSubmit').textContent='Agregar empleado';
+  $('employeeCancelEdit').classList.add('hidden');
+  $('employeeMsg').textContent='El PIN debe tener de 4 a 6 números.';
+}
+
+$('employeeCancelEdit').onclick=resetEmployeeForm;
+
+$('employeeForm').onsubmit=async e=>{
+  e.preventDefault();
+
+  const editing=Number(state.editingEmployeeId)||null;
+  const payload={
+    action:editing?'employee.update':'employee.create',
+    name:$('newName').value.trim(),
+    role:$('newRole').value.trim(),
+    pin:$('newPin').value.trim(),
+    payType:$('newPayType').value,
+    salary:Number($('newSalary').value)
+  };
+
+  if(editing) payload.id=editing;
+
+  try{
+    await adminPost(payload);
+    resetEmployeeForm();
+    $('employeeMsg').innerHTML=`<span class="ok">${editing?'Empleado actualizado.':'Empleado agregado.'}</span>`;
+    await loadAdmin();
+  }catch(x){
+    $('employeeMsg').innerHTML='<span class="err">'+x.message+'</span>';
+  }
+};
+
+$('employeeBody').onclick=async e=>{
+  const editBtn=e.target.closest('[data-edit-employee]');
+  const deleteBtn=e.target.closest('[data-delete-employee]');
+
+  if(editBtn){
+    const id=Number(editBtn.getAttribute('data-edit-employee'));
+    const emp=state.data?.employees?.find(x=>Number(x.id)===id);
+
+    if(!emp){
+      alert('No se encontró el empleado.');
+      return;
+    }
+
+    state.editingEmployeeId=id;
+    $('newName').value=emp.name||'';
+    $('newRole').value=emp.role||'';
+    $('newPayType').value=emp.pay_type||'Semanal';
+    $('newSalary').value=Number(emp.salary||0);
+    $('newPin').value='';
+    $('newPin').required=false;
+    $('newPin').placeholder='Déjalo vacío para conservarlo';
+    $('employeeSubmit').textContent='Guardar cambios';
+    $('employeeCancelEdit').classList.remove('hidden');
+    $('employeeMsg').innerHTML='<span class="yellow">Editando a '+emp.name+'. El PIN es opcional si no deseas cambiarlo.</span>';
+    $('newName').focus();
+    return;
+  }
+
+  if(deleteBtn){
+    const id=Number(deleteBtn.getAttribute('data-delete-employee'));
+    const emp=state.data?.employees?.find(x=>Number(x.id)===id);
+
+    if(!emp){
+      alert('No se encontró el empleado.');
+      return;
+    }
+
+    const ok=confirm(
+      `¿Seguro que deseas eliminar a ${emp.name}?\n\n`+
+      `Se eliminarán también sus registros de asistencia, fotos, incidencias, bonos/descuentos y cortes de pago.\n\n`+
+      `Esta acción no se puede deshacer.`
+    );
+
+    if(!ok)return;
+
+    try{
+      deleteBtn.disabled=true;
+      deleteBtn.textContent='Eliminando…';
+      await adminPost({action:'employee.delete',id});
+
+      if(Number(state.editingEmployeeId)===id){
+        resetEmployeeForm();
+      }
+
+      await loadAdmin();
+      alert('Empleado eliminado correctamente.');
+    }catch(err){
+      alert('No se pudo eliminar: '+err.message);
+      deleteBtn.disabled=false;
+      deleteBtn.textContent='Eliminar';
+    }
+  }
+};
+$('saveSchedule').onclick=async()=>{try{await adminPost({action:'settings.update',workStart:$('workStart').value,workTolerance:$('workTol').value,foodOut:$('foodOut').value,foodOutTolerance:$('foodOutTol').value,foodIn:$('foodIn').value,foodInTolerance:$('foodInTol').value,workEnd:$('workEnd').value,workEndTolerance:$('workEndTol').value});$('scheduleMsg').innerHTML='<span class="ok">Horarios guardados.</span>';await loadAdmin()}catch(e){$('scheduleMsg').innerHTML='<span class="err">'+e.message+'</span>'}};
+$('saveAdminPin').onclick=async()=>{try{await adminPost({action:'admin.pin',pin:$('adminPin').value.trim()});$('scheduleMsg').innerHTML='<span class="ok">PIN administrador actualizado.</span>';$('adminPin').value=''}catch(e){$('scheduleMsg').innerHTML='<span class="err">'+e.message+'</span>'}};
+$('incidentForm').onsubmit=async e=>{e.preventDefault();await adminPost({action:'incident.create',employeeId:Number($('incidentEmployee').value),date:$('incidentDate').value,type:$('incidentType').value,justified:$('incidentJust').value==='true',notes:$('incidentNotes').value.trim()});e.target.reset();$('incidentDate').value=dISO();await loadAdmin()};
+$('adjustForm').onsubmit=async e=>{e.preventDefault();await adminPost({action:'adjustment.create',employeeId:Number($('adjustEmployee').value),date:$('adjustDate').value,type:$('adjustType').value,amount:Number($('adjustAmount').value),reason:$('adjustReason').value.trim(),notes:$('adjustNotes').value.trim()});e.target.reset();$('adjustDate').value=dISO();await loadAdmin()};
+function applyPayDefaults(){if(!state.data)return;const e=state.data.employees.find(x=>x.id==$('payEmployee').value);if(!e)return;$('payType').value=e.pay_type;$('paySalary').value=e.salary}
+$('payEmployee').onchange=applyPayDefaults;
+$('calculatePay').onclick=async()=>{try{const r=await adminPost({action:'payroll.calculate',employeeId:Number($('payEmployee').value),startDate:$('payStart').value,endDate:$('payEnd').value});state.currentPayroll={...r,employeeId:Number($('payEmployee').value),periodType:$('payType').value,startDate:$('payStart').value,endDate:$('payEnd').value,paymentDate:$('payDate').value};$('payName').textContent=r.employee.name;$('payPeriod').textContent=$('payType').value+' · '+$('payStart').value+' a '+$('payEnd').value;$('payNet').textContent=money(r.net);$('payBase').textContent=money(r.base);$('payBonus').textContent=money(r.bonuses);$('payDiscount').textContent=money(r.discounts);$('payLate').textContent=r.late;$('payResult').classList.remove('hidden');fillPrint()}catch(e){alert(e.message)}};
+$('savePay').onclick=async()=>{if(!state.currentPayroll)return;await adminPost({action:'payroll.save',...state.currentPayroll});alert('Corte guardado');await loadAdmin()};
+function fillPrint(){const p=state.currentPayroll;if(!p)return;$('prName').textContent=p.employee.name;$('prPeriod').textContent=p.startDate+' a '+p.endDate;$('prType').textContent=p.periodType;$('prDate').textContent=p.paymentDate;$('prPaymentDate').textContent='Fecha de pago: '+p.paymentDate;$('prBase').textContent=money(p.base);$('prBonus').textContent=money(p.bonuses);$('prDiscount').textContent=money(p.discounts);$('prNet').textContent=money(p.net);$('prEntries').textContent=p.entries;$('prLate').textContent=p.late;$('prInc').textContent=p.incidents;$('prBonus2').textContent=money(p.bonuses);$('prDiscount2').textContent=money(p.discounts);$('prNet2').textContent=money(p.net)}
+$('printPay').onclick=()=>{if(!state.currentPayroll)return;fillPrint();window.print()};
+$('incidentDate').value=dISO();$('adjustDate').value=dISO();$('payEnd').value=dISO();$('payDate').value=dISO();const sd=new Date();sd.setDate(sd.getDate()-6);$('payStart').value=sd.getFullYear()+'-'+String(sd.getMonth()+1).padStart(2,'0')+'-'+String(sd.getDate()).padStart(2,'0');
+})();
+</script>
+</body></html>
