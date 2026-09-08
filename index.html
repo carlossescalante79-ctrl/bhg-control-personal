@@ -44,7 +44,7 @@
 
 <div id="tab-registros" class="adminTab hidden"><div class="sectionTitle"><h2>Registros</h2><p>Historial de entradas, comida y salidas.</p></div><div class="panel"><div class="tableWrap"><table><thead><tr><th>Fecha/Hora</th><th>Empleado</th><th>Movimiento</th><th>Estatus</th><th>Método</th><th>Foto</th><th>Acciones</th></tr></thead><tbody id="attendanceBody"></tbody></table></div></div></div>
 
-<div id="tab-empleados" class="adminTab hidden"><div class="sectionTitle"><h2>Empleados</h2><p>Alta, sueldo y estatus.</p></div><div class="grid"><div class="panel c6"><form id="employeeForm" class="formGrid"><div><label>Nombre</label><input id="newName" required></div><div><label>Puesto</label><input id="newRole"></div><div><label>Tipo de pago</label><select id="newPayType"><option>Semanal</option><option>Quincenal</option></select></div><div><label>Sueldo base</label><input id="newSalary" type="number" min="0" step="0.01" required></div><div><label>PIN</label><input id="newPin" inputmode="numeric" maxlength="6" required></div><div class="full"><button class="btn green" style="width:100%">Agregar empleado</button></div></form><div id="employeeMsg" class="note">El PIN debe tener de 4 a 6 números.</div></div><div class="panel c6"><div class="tableWrap"><table><thead><tr><th>Empleado</th><th>Puesto</th><th>Pago</th><th>Sueldo</th><th>Estado</th></tr></thead><tbody id="employeeBody"></tbody></table></div></div></div></div>
+<div id="tab-empleados" class="adminTab hidden"><div class="sectionTitle"><h2>Empleados</h2><p>Alta, edición, sueldo y estatus.</p></div><div class="grid"><div class="panel c6"><form id="employeeForm" class="formGrid"><div><label>Nombre</label><input id="newName" required></div><div><label>Puesto</label><input id="newRole"></div><div><label>Tipo de pago</label><select id="newPayType"><option>Semanal</option><option>Quincenal</option></select></div><div><label>Sueldo base</label><input id="newSalary" type="number" min="0" step="0.01" required></div><div><label>PIN</label><input id="newPin" inputmode="numeric" maxlength="6" required></div><div class="full actions"><button id="employeeSubmit" class="btn green" style="flex:1">Agregar empleado</button><button id="employeeCancelEdit" type="button" class="btn hidden">Cancelar edición</button></div></form><div id="employeeMsg" class="note">El PIN debe tener de 4 a 6 números.</div></div><div class="panel c6"><div class="tableWrap"><table><thead><tr><th>Empleado</th><th>Puesto</th><th>Pago</th><th>Sueldo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="employeeBody"></tbody></table></div></div></div></div>
 
 <div id="tab-horarios" class="adminTab hidden"><div class="sectionTitle"><h2>Configuración de horarios</h2><p>Horarios y tolerancias por movimiento.</p></div><div class="panel">
 <div class="scheduleCard entry"><div class="scheduleIcon">↪</div><div class="scheduleName"><strong>Entrada laboral</strong><span>Inicio de jornada</span></div><div><label>Hora</label><input id="workStart" type="time"></div><div><label>Tolerancia</label><select id="workTol"><option value="0">0 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div><div class="scheduleNote">A TIEMPO o RETARDO automáticamente.</div></div>
@@ -69,7 +69,7 @@
 <script>
 (()=>{
 const $=id=>document.getElementById(id), mode=(location.pathname==='/registro'||new URLSearchParams(location.search).get('mode')==='qr')?'QR':'Terminal';
-let state={admin:null,employee:null,next:null,data:null,currentPayroll:null};
+let state={admin:null,employee:null,next:null,data:null,currentPayroll:null,editingEmployeeId:null};
 const money=n=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(Number(n||0));
 const dISO=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const movementIcon=m=>m==='Entrada laboral'?'🟢':m==='Salida comida'?'🍴':m==='Entrada comida'?'↩️':'🔴';
@@ -88,7 +88,7 @@ async function loadAdmin(){try{state.data=await api('/api/admin');renderAdmin()}
 function fillSelect(id){const s=$(id);s.innerHTML='';state.data.employees.filter(e=>e.active).forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;s.appendChild(o)})}
 function renderAdmin(){const d=state.data, today=new Date().toLocaleDateString('es-MX');$('stEmployees').textContent=d.employees.filter(x=>x.active).length;$('stEntries').textContent=d.attendance.filter(x=>new Date(x.registered_at).toLocaleDateString('es-MX')===today&&x.movement==='Entrada laboral').length;$('stLate').textContent=d.attendance.filter(x=>new Date(x.registered_at).toLocaleDateString('es-MX')===today&&x.status==='RETARDO').length;const latest={};d.attendance.forEach(x=>{if(!latest[x.employee_id])latest[x.employee_id]=x.movement});$('stFood').textContent=Object.values(latest).filter(x=>x==='Salida comida').length;
 const s=d.settings;$('workStart').value=String(s.work_start).slice(0,5);$('workTol').value=s.work_tolerance;$('foodOut').value=String(s.food_out).slice(0,5);$('foodOutTol').value=s.food_out_tolerance;$('foodIn').value=String(s.food_in).slice(0,5);$('foodInTol').value=s.food_in_tolerance;$('workEnd').value=String(s.work_end).slice(0,5);$('workEndTol').value=s.work_end_tolerance;
-$('employeeBody').innerHTML=d.employees.map(e=>`<tr><td>${e.name}</td><td>${e.role||'—'}</td><td>${e.pay_type}</td><td>${money(e.salary)}</td><td><button class="btn ${e.active?'red':'green'}" data-toggle="${e.id}" data-active="${!e.active}">${e.active?'Desactivar':'Activar'}</button></td></tr>`).join('')||'<tr><td colspan="5">Sin empleados</td></tr>';
+$('employeeBody').innerHTML=d.employees.map(e=>`<tr><td>${e.name}</td><td>${e.role||'—'}</td><td>${e.pay_type}</td><td>${money(e.salary)}</td><td><button class="btn ${e.active?'red':'green'}" data-toggle="${e.id}" data-active="${!e.active}">${e.active?'Desactivar':'Activar'}</button></td><td><div class="actions"><button class="btn" data-edit-employee="${e.id}">Editar</button><button class="btn red" data-delete-employee="${e.id}">Eliminar</button></div></td></tr>`).join('')||'<tr><td colspan="6">Sin empleados</td></tr>';
 $('attendanceBody').innerHTML=d.attendance.map(r=>`<tr><td>${new Date(r.registered_at).toLocaleString('es-MX')}</td><td>${r.name}</td><td>${r.movement}</td><td>${r.status?`<span class="badge ${r.status==='A TIEMPO'?'ok':'late'}">${r.status}</span>`:'—'}</td><td>${r.method}</td><td>${r.photo_data?`<button class="btn" data-photo="${r.id}">Ver foto</button>`:'—'}</td><td><button class="btn red" data-delete-attendance="${r.id}">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="7">Sin registros</td></tr>';
 $('incidentBody').innerHTML=d.incidents.map(r=>`<tr><td>${String(r.incident_date).slice(0,10)}</td><td>${r.name}</td><td>${r.type}</td><td>${r.justified?'Sí':'No'}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="5">Sin incidencias</td></tr>';
 $('adjustBody').innerHTML=d.adjustments.map(r=>`<tr><td>${String(r.adjust_date).slice(0,10)}</td><td>${r.name}</td><td>${r.type}</td><td>${money(r.amount)}</td><td>${r.reason}</td></tr>`).join('')||'<tr><td colspan="5">Sin movimientos</td></tr>';
@@ -135,7 +135,106 @@ $('attendanceBody').onclick=async e=>{
 $('closePhoto').onclick=()=>$('photoModal').classList.add('hidden');
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.adminTab').forEach(x=>x.classList.add('hidden'));$('tab-'+b.dataset.tab).classList.remove('hidden')});
 async function adminPost(body){return api('/api/admin',{method:'POST',body:JSON.stringify(body)})}
-$('employeeForm').onsubmit=async e=>{e.preventDefault();try{await adminPost({action:'employee.create',name:$('newName').value.trim(),role:$('newRole').value.trim(),pin:$('newPin').value.trim(),payType:$('newPayType').value,salary:Number($('newSalary').value)});e.target.reset();$('employeeMsg').innerHTML='<span class="ok">Empleado agregado.</span>';await loadAdmin()}catch(x){$('employeeMsg').innerHTML='<span class="err">'+x.message+'</span>'}};
+function resetEmployeeForm(){
+  state.editingEmployeeId=null;
+  $('employeeForm').reset();
+  $('newPin').required=true;
+  $('newPin').placeholder='';
+  $('employeeSubmit').textContent='Agregar empleado';
+  $('employeeCancelEdit').classList.add('hidden');
+  $('employeeMsg').textContent='El PIN debe tener de 4 a 6 números.';
+}
+
+$('employeeCancelEdit').onclick=resetEmployeeForm;
+
+$('employeeForm').onsubmit=async e=>{
+  e.preventDefault();
+
+  const editing=Number(state.editingEmployeeId)||null;
+  const payload={
+    action:editing?'employee.update':'employee.create',
+    name:$('newName').value.trim(),
+    role:$('newRole').value.trim(),
+    pin:$('newPin').value.trim(),
+    payType:$('newPayType').value,
+    salary:Number($('newSalary').value)
+  };
+
+  if(editing) payload.id=editing;
+
+  try{
+    await adminPost(payload);
+    resetEmployeeForm();
+    $('employeeMsg').innerHTML=`<span class="ok">${editing?'Empleado actualizado.':'Empleado agregado.'}</span>`;
+    await loadAdmin();
+  }catch(x){
+    $('employeeMsg').innerHTML='<span class="err">'+x.message+'</span>';
+  }
+};
+
+$('employeeBody').onclick=async e=>{
+  const editBtn=e.target.closest('[data-edit-employee]');
+  const deleteBtn=e.target.closest('[data-delete-employee]');
+
+  if(editBtn){
+    const id=Number(editBtn.getAttribute('data-edit-employee'));
+    const emp=state.data?.employees?.find(x=>Number(x.id)===id);
+
+    if(!emp){
+      alert('No se encontró el empleado.');
+      return;
+    }
+
+    state.editingEmployeeId=id;
+    $('newName').value=emp.name||'';
+    $('newRole').value=emp.role||'';
+    $('newPayType').value=emp.pay_type||'Semanal';
+    $('newSalary').value=Number(emp.salary||0);
+    $('newPin').value='';
+    $('newPin').required=false;
+    $('newPin').placeholder='Déjalo vacío para conservarlo';
+    $('employeeSubmit').textContent='Guardar cambios';
+    $('employeeCancelEdit').classList.remove('hidden');
+    $('employeeMsg').innerHTML='<span class="yellow">Editando a '+emp.name+'. El PIN es opcional si no deseas cambiarlo.</span>';
+    $('newName').focus();
+    return;
+  }
+
+  if(deleteBtn){
+    const id=Number(deleteBtn.getAttribute('data-delete-employee'));
+    const emp=state.data?.employees?.find(x=>Number(x.id)===id);
+
+    if(!emp){
+      alert('No se encontró el empleado.');
+      return;
+    }
+
+    const ok=confirm(
+      `¿Seguro que deseas eliminar a ${emp.name}?\n\n`+
+      `Se eliminarán también sus registros de asistencia, fotos, incidencias, bonos/descuentos y cortes de pago.\n\n`+
+      `Esta acción no se puede deshacer.`
+    );
+
+    if(!ok)return;
+
+    try{
+      deleteBtn.disabled=true;
+      deleteBtn.textContent='Eliminando…';
+      await adminPost({action:'employee.delete',id});
+
+      if(Number(state.editingEmployeeId)===id){
+        resetEmployeeForm();
+      }
+
+      await loadAdmin();
+      alert('Empleado eliminado correctamente.');
+    }catch(err){
+      alert('No se pudo eliminar: '+err.message);
+      deleteBtn.disabled=false;
+      deleteBtn.textContent='Eliminar';
+    }
+  }
+};
 $('saveSchedule').onclick=async()=>{try{await adminPost({action:'settings.update',workStart:$('workStart').value,workTolerance:$('workTol').value,foodOut:$('foodOut').value,foodOutTolerance:$('foodOutTol').value,foodIn:$('foodIn').value,foodInTolerance:$('foodInTol').value,workEnd:$('workEnd').value,workEndTolerance:$('workEndTol').value});$('scheduleMsg').innerHTML='<span class="ok">Horarios guardados.</span>';await loadAdmin()}catch(e){$('scheduleMsg').innerHTML='<span class="err">'+e.message+'</span>'}};
 $('saveAdminPin').onclick=async()=>{try{await adminPost({action:'admin.pin',pin:$('adminPin').value.trim()});$('scheduleMsg').innerHTML='<span class="ok">PIN administrador actualizado.</span>';$('adminPin').value=''}catch(e){$('scheduleMsg').innerHTML='<span class="err">'+e.message+'</span>'}};
 $('incidentForm').onsubmit=async e=>{e.preventDefault();await adminPost({action:'incident.create',employeeId:Number($('incidentEmployee').value),date:$('incidentDate').value,type:$('incidentType').value,justified:$('incidentJust').value==='true',notes:$('incidentNotes').value.trim()});e.target.reset();$('incidentDate').value=dISO();await loadAdmin()};
