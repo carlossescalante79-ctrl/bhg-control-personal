@@ -11,120 +11,17 @@ function requireAdmin(req,res){
 
 export default async function handler(req,res){
   if(!requireAdmin(req,res)) return;
-
   const sql=db();
 
   try{
-
     if(req.method==='GET'){
-      const [
-        settings,
-        employees,
-        attendance,
-        incidents,
-        adjustments,
-        cuts
-      ] = await Promise.all([
-
-        sql`
-          SELECT
-            id,
-            work_start,
-            work_tolerance,
-            food_out,
-            food_out_tolerance,
-            food_in,
-            food_in_tolerance,
-            work_end,
-            work_end_tolerance
-          FROM settings
-          WHERE id=1
-        `,
-
-        sql`
-          SELECT
-            id,
-            name,
-            role,
-            pay_type,
-            salary,
-            active,
-            created_at
-          FROM employees
-          ORDER BY active DESC,name
-        `,
-
-        sql`
-          SELECT
-            a.id,
-            a.employee_id,
-            e.name,
-            a.movement,
-            a.status,
-            a.method,
-            a.photo_data,
-            a.registered_at
-          FROM attendance a
-          JOIN employees e ON e.id=a.employee_id
-          ORDER BY a.registered_at DESC
-          LIMIT 500
-        `,
-
-        sql`
-          SELECT
-            i.id,
-            i.employee_id,
-            e.name,
-            i.incident_date,
-            i.type,
-            i.justified,
-            i.notes,
-            i.created_at
-          FROM incidents i
-          JOIN employees e ON e.id=i.employee_id
-          ORDER BY i.incident_date DESC,i.id DESC
-          LIMIT 300
-        `,
-
-        sql`
-          SELECT
-            a.id,
-            a.employee_id,
-            e.name,
-            a.adjust_date,
-            a.type,
-            a.amount,
-            a.reason,
-            a.notes,
-            a.created_at
-          FROM adjustments a
-          JOIN employees e ON e.id=a.employee_id
-          ORDER BY a.adjust_date DESC,a.id DESC
-          LIMIT 300
-        `,
-
-        sql`
-          SELECT
-            p.id,
-            p.employee_id,
-            e.name,
-            p.period_type,
-            p.start_date,
-            p.end_date,
-            p.payment_date,
-            p.base_salary,
-            p.bonuses,
-            p.discounts,
-            p.net_pay,
-            p.entries,
-            p.late_count,
-            p.incidents_count,
-            p.created_at
-          FROM payroll_cuts p
-          JOIN employees e ON e.id=p.employee_id
-          ORDER BY p.created_at DESC
-          LIMIT 200
-        `
+      const [settings,employees,attendance,incidents,adjustments,cuts]=await Promise.all([
+        sql`SELECT id,work_start,work_tolerance,food_out,food_out_tolerance,food_in,food_in_tolerance,work_end,work_end_tolerance FROM settings WHERE id=1`,
+        sql`SELECT id,name,role,pay_type,salary,active,created_at FROM employees ORDER BY active DESC,name`,
+        sql`SELECT a.id,a.employee_id,e.name,a.movement,a.status,a.method,a.photo_data,a.registered_at FROM attendance a JOIN employees e ON e.id=a.employee_id ORDER BY a.registered_at DESC LIMIT 500`,
+        sql`SELECT i.id,i.employee_id,e.name,i.incident_date,i.type,i.justified,i.notes,i.created_at FROM incidents i JOIN employees e ON e.id=i.employee_id ORDER BY i.incident_date DESC,i.id DESC LIMIT 300`,
+        sql`SELECT a.id,a.employee_id,e.name,a.adjust_date,a.type,a.amount,a.reason,a.notes,a.created_at FROM adjustments a JOIN employees e ON e.id=a.employee_id ORDER BY a.adjust_date DESC,a.id DESC LIMIT 300`,
+        sql`SELECT p.id,p.employee_id,e.name,p.period_type,p.start_date,p.end_date,p.payment_date,p.base_salary,p.bonuses,p.discounts,p.net_pay,p.entries,p.late_count,p.incidents_count,p.created_at FROM payroll_cuts p JOIN employees e ON e.id=p.employee_id ORDER BY p.created_at DESC LIMIT 200`
       ]);
 
       return res.json({
@@ -143,38 +40,23 @@ export default async function handler(req,res){
 
     const a=req.body?.action;
 
-    // =========================
-    // CREAR EMPLEADO
-    // =========================
     if(a==='employee.create'){
-      const {
-        name,
-        role,
-        pin,
-        payType,
-        salary
-      }=req.body;
+      const {name,role,pin,payType,salary}=req.body;
 
       if(
-        !name ||
-        !/^\d{4,6}$/.test(String(pin)) ||
+        !String(name||'').trim() ||
+        !/^\d{4,6}$/.test(String(pin||'')) ||
         Number(salary)<0
       ){
         return res.status(400).json({error:'Datos inválidos'});
       }
 
       await sql`
-        INSERT INTO employees(
-          name,
-          role,
-          pin_hash,
-          pay_type,
-          salary
-        )
+        INSERT INTO employees(name,role,pin_hash,pay_type,salary)
         VALUES(
-          ${name},
-          ${role||null},
-          ${hashPin(pin)},
+          ${String(name).trim()},
+          ${String(role||'').trim()||null},
+          ${hashPin(String(pin))},
           ${payType==='Quincenal'?'Quincenal':'Semanal'},
           ${Number(salary)}
         )
@@ -183,28 +65,91 @@ export default async function handler(req,res){
       return res.json({ok:true});
     }
 
-    // =========================
-    // ACTIVAR / DESACTIVAR EMPLEADO
-    // =========================
+    if(a==='employee.update'){
+      const id=Number(req.body.id);
+      const name=String(req.body.name||'').trim();
+      const role=String(req.body.role||'').trim();
+      const pin=String(req.body.pin||'').trim();
+      const payType=req.body.payType==='Quincenal'?'Quincenal':'Semanal';
+      const salary=Number(req.body.salary);
+
+      if(!Number.isInteger(id)||id<=0||!name||salary<0){
+        return res.status(400).json({error:'Datos inválidos'});
+      }
+
+      if(pin && !/^\d{4,6}$/.test(pin)){
+        return res.status(400).json({error:'El PIN debe tener de 4 a 6 números'});
+      }
+
+      const exists=await sql`SELECT id FROM employees WHERE id=${id}`;
+      if(!exists.length){
+        return res.status(404).json({error:'Empleado no encontrado'});
+      }
+
+      if(pin){
+        await sql`
+          UPDATE employees
+          SET
+            name=${name},
+            role=${role||null},
+            pay_type=${payType},
+            salary=${salary},
+            pin_hash=${hashPin(pin)}
+          WHERE id=${id}
+        `;
+      }else{
+        await sql`
+          UPDATE employees
+          SET
+            name=${name},
+            role=${role||null},
+            pay_type=${payType},
+            salary=${salary}
+          WHERE id=${id}
+        `;
+      }
+
+      return res.json({ok:true,message:'Empleado actualizado correctamente'});
+    }
+
     if(a==='employee.toggle'){
       await sql`
         UPDATE employees
         SET active=${!!req.body.active}
         WHERE id=${Number(req.body.id)}
       `;
-
       return res.json({ok:true});
     }
 
-    // =========================
-    // ACTUALIZAR HORARIOS
-    // =========================
+    if(a==='employee.delete'){
+      const id=Number(req.body.id);
+
+      if(!Number.isInteger(id)||id<=0){
+        return res.status(400).json({error:'Empleado inválido'});
+      }
+
+      const emp=await sql`SELECT id,name FROM employees WHERE id=${id}`;
+      if(!emp.length){
+        return res.status(404).json({error:'Empleado no encontrado'});
+      }
+
+      await sql`DELETE FROM payroll_cuts WHERE employee_id=${id}`;
+      await sql`DELETE FROM adjustments WHERE employee_id=${id}`;
+      await sql`DELETE FROM incidents WHERE employee_id=${id}`;
+      await sql`DELETE FROM attendance WHERE employee_id=${id}`;
+      await sql`DELETE FROM employees WHERE id=${id}`;
+
+      return res.json({
+        ok:true,
+        message:`Empleado ${emp[0].name} eliminado correctamente`
+      });
+    }
+
     if(a==='settings.update'){
       const r=req.body;
 
       await sql`
-        UPDATE settings
-        SET
+        UPDATE settings SET
           work_start=${r.workStart},
           work_tolerance=${Number(r.workTolerance)},
           food_out=${r.foodOut},
@@ -220,9 +165,6 @@ export default async function handler(req,res){
       return res.json({ok:true});
     }
 
-    // =========================
-    // CAMBIAR PIN ADMIN
-    // =========================
     if(a==='admin.pin'){
       const pin=String(req.body.pin||'');
 
@@ -232,29 +174,18 @@ export default async function handler(req,res){
 
       await sql`
         UPDATE settings
-        SET
-          admin_pin_hash=${hashPin(pin)},
-          updated_at=NOW()
+        SET admin_pin_hash=${hashPin(pin)},updated_at=NOW()
         WHERE id=1
       `;
 
       return res.json({ok:true});
     }
 
-    // =========================
-    // CREAR INCIDENCIA
-    // =========================
     if(a==='incident.create'){
       const r=req.body;
 
       await sql`
-        INSERT INTO incidents(
-          employee_id,
-          incident_date,
-          type,
-          justified,
-          notes
-        )
+        INSERT INTO incidents(employee_id,incident_date,type,justified,notes)
         VALUES(
           ${Number(r.employeeId)},
           ${r.date},
@@ -267,21 +198,11 @@ export default async function handler(req,res){
       return res.json({ok:true});
     }
 
-    // =========================
-    // CREAR DESCUENTO / BONO
-    // =========================
     if(a==='adjustment.create'){
       const r=req.body;
 
       await sql`
-        INSERT INTO adjustments(
-          employee_id,
-          adjust_date,
-          type,
-          amount,
-          reason,
-          notes
-        )
+        INSERT INTO adjustments(employee_id,adjust_date,type,amount,reason,notes)
         VALUES(
           ${Number(r.employeeId)},
           ${r.date},
@@ -295,14 +216,10 @@ export default async function handler(req,res){
       return res.json({ok:true});
     }
 
-    // =========================
-    // ELIMINAR REGISTRO DE ASISTENCIA
-    // SOLO ADMIN
-    // =========================
     if(a==='attendance.delete'){
       const id=Number(req.body.id);
 
-      if(!Number.isInteger(id) || id<=0){
+      if(!Number.isInteger(id)||id<=0){
         return res.status(400).json({error:'Registro inválido'});
       }
 
@@ -322,89 +239,53 @@ export default async function handler(req,res){
       });
     }
 
-    // =========================
-    // CALCULAR NÓMINA
-    // =========================
     if(a==='payroll.calculate'){
       const r=req.body;
       const eid=Number(r.employeeId);
 
-      const emp=(
-        await sql`
-          SELECT
-            id,
-            name,
-            pay_type,
-            salary
-          FROM employees
-          WHERE id=${eid}
-        `
-      )[0];
+      const emp=(await sql`
+        SELECT id,name,pay_type,salary
+        FROM employees
+        WHERE id=${eid}
+      `)[0];
 
       if(!emp){
         return res.status(404).json({error:'Empleado no encontrado'});
       }
 
       const adj=await sql`
-        SELECT
-          type,
-          COALESCE(SUM(amount),0)::numeric AS total
+        SELECT type,COALESCE(SUM(amount),0)::numeric AS total
         FROM adjustments
-        WHERE
-          employee_id=${eid}
+        WHERE employee_id=${eid}
           AND adjust_date BETWEEN ${r.startDate} AND ${r.endDate}
         GROUP BY type
       `;
 
-      const bonuses=Number(
-        adj.find(x=>x.type==='Bono')?.total||0
-      );
+      const bonuses=Number(adj.find(x=>x.type==='Bono')?.total||0);
+      const discounts=Number(adj.find(x=>x.type==='Descuento')?.total||0);
 
-      const discounts=Number(
-        adj.find(x=>x.type==='Descuento')?.total||0
-      );
+      const at=(await sql`
+        SELECT
+          COUNT(*) FILTER (WHERE movement='Entrada laboral')::int AS entries,
+          COUNT(*) FILTER (
+            WHERE movement='Entrada laboral'
+            AND status='RETARDO'
+          )::int AS late
+        FROM attendance
+        WHERE employee_id=${eid}
+          AND (registered_at AT TIME ZONE 'America/Mexico_City')::date
+          BETWEEN ${r.startDate} AND ${r.endDate}
+      `)[0];
 
-      const at=(
-        await sql`
-          SELECT
-            COUNT(*) FILTER (
-              WHERE movement='Entrada laboral'
-            )::int AS entries,
-
-            COUNT(*) FILTER (
-              WHERE movement='Entrada laboral'
-              AND status='RETARDO'
-            )::int AS late
-
-          FROM attendance
-
-          WHERE
-            employee_id=${eid}
-            AND
-            (
-              registered_at
-              AT TIME ZONE 'America/Mexico_City'
-            )::date
-            BETWEEN ${r.startDate} AND ${r.endDate}
-        `
-      )[0];
-
-      const inc=(
-        await sql`
-          SELECT COUNT(*)::int AS count
-          FROM incidents
-          WHERE
-            employee_id=${eid}
-            AND incident_date
-            BETWEEN ${r.startDate} AND ${r.endDate}
-        `
-      )[0].count;
+      const inc=(await sql`
+        SELECT COUNT(*)::int AS count
+        FROM incidents
+        WHERE employee_id=${eid}
+          AND incident_date BETWEEN ${r.startDate} AND ${r.endDate}
+      `)[0].count;
 
       const base=Number(emp.salary);
-      const net=Math.max(
-        0,
-        base+bonuses-discounts
-      );
+      const net=Math.max(0,base+bonuses-discounts);
 
       return res.json({
         employee:emp,
@@ -418,9 +299,6 @@ export default async function handler(req,res){
       });
     }
 
-    // =========================
-    // GUARDAR CORTE DE PAGO
-    // =========================
     if(a==='payroll.save'){
       const r=req.body;
 
@@ -458,15 +336,10 @@ export default async function handler(req,res){
       return res.json({ok:true});
     }
 
-    return res.status(400).json({
-      error:'Acción desconocida'
-    });
+    return res.status(400).json({error:'Acción desconocida'});
 
   }catch(e){
     console.error(e);
-
-    return res.status(500).json({
-      error:e.message
-    });
+    return res.status(500).json({error:e.message});
   }
 }
