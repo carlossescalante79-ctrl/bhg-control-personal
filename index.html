@@ -13,10 +13,10 @@
   </style>
   </head>
   <body>
-  <header><div class="brand"><img src="/bhg_logo.jpg" alt="BHG"><div><h1><span class="yellow">BHG</span> Control de Personal</h1><small id="modeLabel">Terminal de asistencia</small></div></div><small id="clock"></small></header>
+  <header><div class="brand"><img src="https://bhg-control-personal.vercel.app/bhg_logo.jpg" alt="BHG"><div><h1><span class="yellow">BHG</span> Control de Personal</h1><small id="modeLabel">Terminal de asistencia</small></div></div><small id="clock"></small></header>
   <main>
   <section id="loginView" class="card terminal">
-    <img class="heroLogo" src="/bhg_logo.jpg" alt="Black Hawks Garage">
+    <img class="heroLogo" src="https://bhg-control-personal.vercel.app/bhg_logo.jpg" alt="Black Hawks Garage">
     <h2 id="loginTitle">Terminal BHG</h2><small id="loginSubtitle">Empleado o administrador: ingresa tu PIN</small>
     <div class="field"><label>PIN</label><input id="pinInput" inputmode="numeric" maxlength="6" placeholder="••••" autocomplete="off"></div>
     <button id="continueBtn" class="btn yellow big" style="margin-top:14px">CONTINUAR</button>
@@ -24,7 +24,7 @@
   </section>
   
   <section id="employeeView" class="card terminal hidden">
-    <img class="heroLogo" src="/bhg_logo.jpg" alt="BHG"><small>Empleado identificado</small><h2 id="empName">—</h2><small id="empRole">—</small>
+    <img class="heroLogo" src="https://bhg-control-personal.vercel.app/bhg_logo.jpg" alt="BHG"><small>Empleado identificado</small><h2 id="empName">—</h2><small id="empRole">—</small>
     <div class="moveBox"><small>TU SIGUIENTE MOVIMIENTO</small><div class="moveIcon" id="moveIcon">🟢</div><h2 id="moveName">ENTRADA LABORAL</h2></div>
     <div class="camera"><video id="video" playsinline muted></video><canvas id="canvas"></canvas><small>Se tomará una foto como evidencia al registrar.</small></div>
     <button id="registerBtn" class="btn green big">REGISTRAR</button><button id="cancelBtn" class="btn big" style="margin-top:8px">Cancelar</button>
@@ -63,7 +63,7 @@
   </div></div>
   </section>
   
-  <section id="printReport" class="printOnly"><div class="prHead"><img src="/bhg_logo.jpg"><div><h1>BHG Control de Personal</h1><p>Black Hawks Garage</p></div><div><b>CORTE DE PAGO</b><p id="prPaymentDate"></p></div></div><h2 class="prTitle">Resumen de periodo</h2><div class="prMeta"><div><b>Empleado:</b> <span id="prName"></span></div><div><b>Periodo:</b> <span id="prPeriod"></span></div><div><b>Tipo de pago:</b> <span id="prType"></span></div><div><b>Fecha de pago:</b> <span id="prDate"></span></div></div><div class="prGrid"><div class="prBox"><span>Sueldo base</span><strong id="prBase"></strong></div><div class="prBox"><span>Bonos</span><strong id="prBonus"></strong></div><div class="prBox"><span>Descuentos</span><strong id="prDiscount"></strong></div><div class="prBox prNet"><span>Total a pagar</span><strong id="prNet"></strong></div></div><table class="prTable"><tbody><tr><th>Entradas registradas</th><td id="prEntries"></td></tr><tr><th>Retardos</th><td id="prLate"></td></tr><tr><th>Incidencias</th><td id="prInc"></td></tr><tr><th>Bonos</th><td id="prBonus2"></td></tr><tr><th>Descuentos</th><td id="prDiscount2"></td></tr><tr><th>Total a pagar</th><td id="prNet2"></td></tr></tbody></table><div class="prFooter">Documento generado electrónicamente por BHG Control de Personal</div></section>
+  <section id="printReport" class="printOnly"><div class="prHead"><img src="https://bhg-control-personal.vercel.app/bhg_logo.jpg"><div><h1>BHG Control de Personal</h1><p>Black Hawks Garage</p></div><div><b>CORTE DE PAGO</b><p id="prPaymentDate"></p></div></div><h2 class="prTitle">Resumen de periodo</h2><div class="prMeta"><div><b>Empleado:</b> <span id="prName"></span></div><div><b>Periodo:</b> <span id="prPeriod"></span></div><div><b>Tipo de pago:</b> <span id="prType"></span></div><div><b>Fecha de pago:</b> <span id="prDate"></span></div></div><div class="prGrid"><div class="prBox"><span>Sueldo base</span><strong id="prBase"></strong></div><div class="prBox"><span>Bonos</span><strong id="prBonus"></strong></div><div class="prBox"><span>Descuentos</span><strong id="prDiscount"></strong></div><div class="prBox prNet"><span>Total a pagar</span><strong id="prNet"></strong></div></div><table class="prTable"><tbody><tr><th>Entradas registradas</th><td id="prEntries"></td></tr><tr><th>Retardos</th><td id="prLate"></td></tr><tr><th>Incidencias</th><td id="prInc"></td></tr><tr><th>Bonos</th><td id="prBonus2"></td></tr><tr><th>Descuentos</th><td id="prDiscount2"></td></tr><tr><th>Total a pagar</th><td id="prNet2"></td></tr></tbody></table><div class="prFooter">Documento generado electrónicamente por BHG Control de Personal</div></section>
   </main>
   <div id="photoModal" class="photoModal hidden"><div class="inner"><div class="actions" style="justify-content:flex-end"><button id="closePhoto" class="btn">Cerrar</button></div><img id="photoImg" alt="Evidencia"></div></div>
   <script>
