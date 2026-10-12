@@ -23,7 +23,70 @@ export default async function handler(req,res){
       corrected_by TEXT NOT NULL DEFAULT 'Administrador', corrected_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`;
     await sql`ALTER TABLE payroll_cuts ADD COLUMN IF NOT EXISTS detail_json JSONB`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual'`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS auto_key TEXT`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS review_status TEXT NOT NULL DEFAULT 'pendiente'`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS resolution TEXT`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS approved_amount NUMERIC(12,2)`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS payroll_cut_id BIGINT`;
+    await sql`ALTER TABLE incidents ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ`;
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_bhg_incident_auto_key ON incidents(auto_key) WHERE auto_key IS NOT NULL`;
+
+    // Sincronización idempotente: no toca incidencias manuales ni las ya cerradas.
+    async function syncAttendanceIncidents(){
+      const [staff,settingsRows,marks]=await Promise.all([
+        sql`SELECT id,created_at,active,use_custom_schedule,custom_work_start,custom_work_tolerance,custom_food_in,custom_food_in_tolerance,custom_work_end FROM employees WHERE active=true`,
+        sql`SELECT work_start,work_tolerance,food_in,food_in_tolerance,work_end FROM settings WHERE id=1`,
+        sql`SELECT employee_id,movement,status,(registered_at AT TIME ZONE 'America/Mexico_City')::date::text AS day, to_char(registered_at AT TIME ZONE 'America/Mexico_City','HH24:MI') AS clock FROM attendance WHERE registered_at >= NOW()-INTERVAL '47 days' ORDER BY registered_at`
+      ]);
+      const cfg=settingsRows[0];if(!cfg)return;
+      const today=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Mexico_City'});
+      const byDay=new Map();
+      for(const m of marks){const k=m.employee_id+'|'+m.day;if(!byDay.has(k))byDay.set(k,[]);byDay.get(k).push(m)}
+      const minutes=v=>{const [h,m]=String(v||'00:00').slice(0,5).split(':').map(Number);return h*60+m};
+      for(const emp of staff){
+        const created=new Date(emp.created_at).toLocaleDateString('sv-SE',{timeZone:'America/Mexico_City'});
+        for(let back=0;back<=45;back++){
+          const d=new Date(Date.now()-back*86400000),day=d.toLocaleDateString('sv-SE',{timeZone:'America/Mexico_City'});
+          if(day<created||day>=today)continue;
+          const weekday=new Date(day+'T12:00:00Z').getUTCDay();if(weekday===0||weekday===6)continue;
+          const regs=byDay.get(emp.id+'|'+day)||[];
+          const entry=regs.find(x=>x.movement==='Entrada laboral');
+          const exit=regs.find(x=>x.movement==='Salida laboral');
+          const foodOut=regs.find(x=>x.movement==='Salida comida');
+          const foodIn=regs.find(x=>x.movement==='Entrada comida');
+          const start=minutes(emp.use_custom_schedule&&emp.custom_work_start||cfg.work_start);
+          const tol=Number(emp.use_custom_schedule?emp.custom_work_tolerance??cfg.work_tolerance:cfg.work_tolerance);
+          const lunch=minutes(emp.use_custom_schedule&&emp.custom_food_in||cfg.food_in);
+          const lunchTol=Number(emp.use_custom_schedule?emp.custom_food_in_tolerance??cfg.food_in_tolerance:cfg.food_in_tolerance);
+          const end=minutes(emp.use_custom_schedule&&emp.custom_work_end||cfg.work_end);
+          const detected=[];
+          if(!entry&&!exit&&!foodOut&&!foodIn)detected.push(['Falta','No existen marcaciones de la jornada']);
+          else{
+            if(!entry)detected.push(['Sin entrada laboral','No existe marcación de entrada']);
+            if(!exit)detected.push(['Sin salida laboral','No existe marcación de salida']);
+            if(entry){
+              const arrival=minutes(entry.clock);
+              if(arrival>start+tol)detected.push(['Retardo entrada',`Horario ${cfg.work_start}; marcación ${entry.clock}; ${arrival-start} minutos después de la entrada`]);
+              // Si llegó 2 horas tarde, no se exigen movimientos de comida.
+              if(arrival<start+120){
+                if(!foodOut)detected.push(['Sin salida comida','Falta marcación de salida a comida']);
+                if(!foodIn)detected.push(['Sin entrada comida','Falta marcación de regreso de comida']);
+              }
+            }
+            if(foodIn&&minutes(foodIn.clock)>lunch+lunchTol)detected.push(['Retardo comida',`Regreso ${foodIn.clock}; ${minutes(foodIn.clock)-lunch} minutos después de la hora programada`]);
+            if(exit&&minutes(exit.clock)<end)detected.push(['Salida anticipada',`Salida ${exit.clock}; horario de salida ${emp.custom_work_end||cfg.work_end}`]);
+          }
+          for(const [type,note] of detected){
+            const key=`auto:${emp.id}:${day}:${type}`;
+            await sql`INSERT INTO incidents(employee_id,incident_date,type,justified,notes,source,auto_key,review_status)
+              VALUES(${emp.id},${day},${type},false,${note},'auto',${key},'pendiente') ON CONFLICT DO NOTHING`;
+          }
+        }
+      }
+    }
     if(req.method==='GET'){
+      await syncAttendanceIncidents();
       const [settings,employees,attendance,incidents,adjustments,cuts,corrections]=await Promise.all([
         sql`SELECT id,work_start,work_tolerance,food_out,food_out_tolerance,food_in,food_in_tolerance,work_end,work_end_tolerance FROM settings WHERE id=1`,
         sql`SELECT
@@ -36,7 +99,7 @@ export default async function handler(req,res){
         FROM employees
         ORDER BY active DESC,name`,
         sql`SELECT a.id,a.employee_id,e.name,a.movement,a.status,a.method,a.photo_data,a.registered_at FROM attendance a JOIN employees e ON e.id=a.employee_id ORDER BY a.registered_at DESC LIMIT 3000`,
-        sql`SELECT i.id,i.employee_id,e.name,i.incident_date,i.type,i.justified,i.notes,i.created_at FROM incidents i JOIN employees e ON e.id=i.employee_id ORDER BY i.incident_date DESC,i.id DESC LIMIT 300`,
+        sql`SELECT i.id,i.employee_id,e.name,i.incident_date,i.type,i.justified,i.notes,i.created_at,i.source,i.review_status,i.resolution,i.approved_amount,i.payroll_cut_id FROM incidents i JOIN employees e ON e.id=i.employee_id ORDER BY i.incident_date DESC,i.id DESC LIMIT 300`,
         sql`SELECT a.id,a.employee_id,e.name,a.adjust_date,a.type,a.amount,a.reason,a.notes,a.created_at FROM adjustments a JOIN employees e ON e.id=a.employee_id ORDER BY a.adjust_date DESC,a.id DESC LIMIT 300`,
         sql`SELECT p.id,p.employee_id,e.name,e.phone,p.period_type,p.start_date,p.end_date,p.payment_date,p.base_salary,p.bonuses,p.discounts,p.net_pay,p.entries,p.late_count,p.incidents_count,p.detail_json,p.created_at FROM payroll_cuts p JOIN employees e ON e.id=p.employee_id ORDER BY p.created_at DESC LIMIT 200`,
         sql`SELECT * FROM attendance_corrections ORDER BY corrected_at DESC LIMIT 1000`
@@ -261,6 +324,21 @@ export default async function handler(req,res){
       return res.json({ok:true});
     }
 
+    if(a==='incident.review'){
+      const id=Number(req.body.id),status=String(req.body.status||'');
+      const allowed=['pendiente','revisada'];
+      if(!Number.isInteger(id)||!allowed.includes(status))return res.status(400).json({error:'Revisión inválida'});
+      const resolution=String(req.body.resolution||'').trim();
+      if(status==='revisada'&&!resolution)return res.status(400).json({error:'Indica el detalle de la revisión'});
+      const amount=Number(req.body.amount||0);
+      if(!Number.isFinite(amount)||amount<0)return res.status(400).json({error:'Monto inválido'});
+      const justified=!!req.body.justified;
+      const updated=await sql`UPDATE incidents SET review_status=${status},resolution=${resolution||null},approved_amount=${amount},justified=${justified},reviewed_at=NOW()
+        WHERE id=${id} AND payroll_cut_id IS NULL RETURNING id`;
+      if(!updated.length)return res.status(409).json({error:'Incidencia inexistente o cerrada en nómina'});
+      return res.json({ok:true});
+    }
+
     if(a==='adjustment.create'){
       const r=req.body;
 
@@ -359,7 +437,7 @@ export default async function handler(req,res){
         ORDER BY registered_at,id
       `;
       const incidents=await sql`
-        SELECT incident_date::text AS day,type,justified,notes FROM incidents
+        SELECT id,incident_date::text AS day,type,justified,notes,review_status,resolution,approved_amount,payroll_cut_id FROM incidents
         WHERE employee_id=${eid} AND incident_date BETWEEN ${r.startDate} AND ${r.endDate}
         ORDER BY incident_date,id
       `;
@@ -416,7 +494,7 @@ export default async function handler(req,res){
         }
         if(justified && unworked>0){review=true;unworked=0;note='Incidencia justificada: no se propone ajuste automático';}
         proposedMinutes+=unworked;
-        days.push({day,minutes:unworked,amount:Math.round(unworked*minuteRate*100)/100,note,review,absence:absence||a['Entrada laboral']==null,incomplete,justified,incidents:ins.map(x=>x.type+(x.justified?' (justificada)':''))});
+        days.push({day,minutes:unworked,amount:Math.round(unworked*minuteRate*100)/100,note,review,absence:absence||a['Entrada laboral']==null,incomplete,justified,incidents:ins.map(x=>({id:x.id,type:x.type,justified:x.justified,notes:x.notes,status:x.review_status,resolution:x.resolution,amount:x.approved_amount,cutId:x.payroll_cut_id}))});
       }
       const proposedAdjustment=Math.round(proposedMinutes*minuteRate*100)/100;
       const net=Math.max(0,base+bonuses-manualDiscounts);
@@ -428,8 +506,10 @@ export default async function handler(req,res){
 
     if(a==='payroll.save'){
       const r=req.body;
+      const unresolved=await sql`SELECT id FROM incidents WHERE employee_id=${Number(r.employeeId)} AND incident_date BETWEEN ${r.startDate} AND ${r.endDate} AND payroll_cut_id IS NULL AND review_status='pendiente' LIMIT 1`;
+      if(unresolved.length)return res.status(409).json({error:'Hay incidencias pendientes. Revísalas en Incidencias antes de guardar el corte.'});
 
-      await sql`
+      const saved=await sql`
         INSERT INTO payroll_cuts(
           employee_id,
           period_type,
@@ -458,9 +538,9 @@ export default async function handler(req,res){
           ${Number(r.late)},
           ${Number(r.incidents)},
           ${JSON.stringify({days:r.reviewDays||[],minuteRate:r.minuteRate,approvedAdjustment:r.approvedAdjustment??0,attendance:(await sql`SELECT movement,status,registered_at FROM attendance WHERE employee_id=${Number(r.employeeId)} AND (registered_at AT TIME ZONE 'America/Mexico_City')::date BETWEEN ${r.startDate} AND ${r.endDate} ORDER BY registered_at`).map(x=>({movement:x.movement,status:x.status,registered_at:x.registered_at}))})}::jsonb
-        )
+        ) RETURNING id
       `;
-
+      await sql`UPDATE incidents SET review_status='cerrada',payroll_cut_id=${saved[0].id} WHERE employee_id=${Number(r.employeeId)} AND incident_date BETWEEN ${r.startDate} AND ${r.endDate} AND review_status='revisada' AND payroll_cut_id IS NULL`;
       return res.json({ok:true});
     }
 
