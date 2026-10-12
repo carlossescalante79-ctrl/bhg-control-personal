@@ -1,3 +1,4 @@
+import { nextMovement } from './_movement.js';
 import { db } from './_db.js';
 import { hashPin } from './_auth.js';
 
@@ -49,28 +50,6 @@ function statusFor(movement, schedule) {
   }
 
   return null;
-}
-
-async function nextMovement(sql, employeeId) {
-  const rows=await sql`
-    SELECT movement
-    FROM attendance
-    WHERE employee_id=${employeeId}
-      AND (registered_at AT TIME ZONE 'America/Mexico_City')::date
-          =(NOW() AT TIME ZONE 'America/Mexico_City')::date
-    ORDER BY registered_at DESC
-    LIMIT 1
-  `;
-
-  const last=rows[0]?.movement||null;
-
-  if(!last) return 'Entrada laboral';
-  if(last==='Entrada laboral') return 'Salida comida';
-  if(last==='Salida comida') return 'Entrada comida';
-  if(last==='Entrada comida') return 'Salida laboral';
-  if(last==='Salida laboral') return null;
-
-  return 'Entrada laboral';
 }
 
 export default async function handler(req,res){
