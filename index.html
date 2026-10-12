@@ -291,7 +291,7 @@
 <div class="scheduleCard exit"><div class="scheduleIcon">↗</div><div class="scheduleName"><strong>Salida laboral</strong><span>Fin de jornada</span></div><div><label>Hora</label><input id="workEnd" type="time"></div><div><label>Tolerancia</label><select id="workEndTol"><option value="0">0 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div><div class="scheduleNote">Salida final del día.</div></div>
 <button id="saveSchedule" class="btn green saveWide">Guardar horarios</button><div id="scheduleMsg" class="note">—</div><hr style="border-color:var(--line);margin:18px 0"><label>Nuevo PIN administrador</label><input id="adminPin" inputmode="numeric" maxlength="6"><button id="saveAdminPin" class="btn yellow" style="margin-top:10px">Cambiar PIN admin</button></div></div>
 
-<div id="tab-incidencias" class="adminTab hidden"><div class="sectionTitle"><h2>Incidencias</h2><p>Faltas, permisos, incapacidades y observaciones.</p></div><div class="panel"><form id="incidentForm" class="formGrid"><div><label>Empleado</label><select id="incidentEmployee"></select></div><div><label>Fecha</label><input id="incidentDate" type="date"></div><div><label>Tipo</label><select id="incidentType"><option>Falta</option><option>Permiso</option><option>Incapacidad</option><option>Salida anticipada</option><option>Olvidó registrar</option><option>Otro</option></select></div><div><label>Justificada</label><select id="incidentJust"><option value="true">Sí</option><option value="false">No</option></select></div><div class="full"><label>Observaciones</label><textarea id="incidentNotes" rows="3"></textarea></div><div class="full"><button class="btn green">Guardar incidencia</button></div></form><div class="tableWrap"><table><thead><tr><th>Fecha</th><th>Empleado</th><th>Tipo</th><th>Justificada</th><th>Observaciones</th></tr></thead><tbody id="incidentBody"></tbody></table></div></div></div>
+<div id="tab-incidencias" class="adminTab hidden"><div class="sectionTitle"><h2>Incidencias</h2><p>Faltas, permisos, incapacidades y observaciones.</p></div><div class="panel"><form id="incidentForm" class="formGrid"><div><label>Empleado</label><select id="incidentEmployee"></select></div><div><label>Fecha</label><input id="incidentDate" type="date"></div><div><label>Tipo</label><select id="incidentType"><option>Falta</option><option>Permiso</option><option>Incapacidad</option><option>Salida anticipada</option><option>Olvidó registrar</option><option>Otro</option></select></div><div><label>Justificada</label><select id="incidentJust"><option value="true">Sí</option><option value="false">No</option></select></div><div class="full"><label>Observaciones</label><textarea id="incidentNotes" rows="3"></textarea></div><div class="full"><button class="btn green">Guardar incidencia</button></div></form><div class="tableWrap"><table><thead><tr><th>Fecha</th><th>Empleado</th><th>Tipo</th><th>Justificada</th><th>Observaciones y resolución</th><th>Estado / revisar</th></tr></thead><tbody id="incidentBody"></tbody></table></div></div></div>
 
 <div id="tab-ajustes" class="adminTab hidden"><div class="sectionTitle"><h2>Descuentos / Bonos</h2><p>Movimientos económicos con historial.</p></div><div class="panel"><form id="adjustForm" class="formGrid"><div><label>Empleado</label><select id="adjustEmployee"></select></div><div><label>Fecha</label><input id="adjustDate" type="date"></div><div><label>Tipo</label><select id="adjustType"><option>Descuento</option><option>Bono</option></select></div><div><label>Monto</label><input id="adjustAmount" type="number" min="0" step="0.01"></div><div class="full"><label>Motivo</label><input id="adjustReason"></div><div class="full"><label>Observaciones</label><textarea id="adjustNotes" rows="3"></textarea></div><div class="full"><button class="btn green">Guardar movimiento</button></div></form><div class="totals"><div class="totalBox"><small>Bonos acumulados</small><strong class="ok" id="bonusTotal">$0.00</strong></div><div class="totalBox"><small>Descuentos acumulados</small><strong class="err" id="discountTotal">$0.00</strong></div></div><div class="tableWrap"><table><thead><tr><th>Fecha</th><th>Empleado</th><th>Tipo</th><th>Monto</th><th>Motivo</th></tr></thead><tbody id="adjustBody"></tbody></table></div></div></div>
 
@@ -334,7 +334,7 @@ function renderAdmin(){const d=state.data, today=new Date().toLocaleDateString('
 const s=d.settings;$('workStart').value=String(s.work_start).slice(0,5);$('workTol').value=s.work_tolerance;$('foodOut').value=String(s.food_out).slice(0,5);$('foodOutTol').value=s.food_out_tolerance;$('foodIn').value=String(s.food_in).slice(0,5);$('foodInTol').value=s.food_in_tolerance;$('workEnd').value=String(s.work_end).slice(0,5);$('workEndTol').value=s.work_end_tolerance;
 $('employeeBody').innerHTML=d.employees.map(e=>`<tr><td>${e.name}</td><td>${e.phone||'Sin registrar'}</td><td>${e.role||'—'}</td><td>${e.pay_type}</td><td>${money(e.salary)}</td><td>${e.use_custom_schedule?'<span class="badge ok">Personalizado</span>':'General'}</td><td><button class="btn ${e.active?'red':'green'}" data-toggle="${e.id}" data-active="${!e.active}">${e.active?'Desactivar':'Activar'}</button></td><td><div class="actions"><button class="btn" data-edit-employee="${e.id}">Editar</button><button class="btn red" data-delete-employee="${e.id}">Eliminar</button></div></td></tr>`).join('')||'<tr><td colspan="8">Sin empleados</td></tr>';
 renderAttendanceGroups();
-$('incidentBody').innerHTML=d.incidents.map(r=>`<tr><td>${String(r.incident_date).slice(0,10)}</td><td>${r.name}</td><td>${r.type}</td><td>${r.justified?'Sí':'No'}</td><td>${r.notes||'—'}</td></tr>`).join('')||'<tr><td colspan="5">Sin incidencias</td></tr>';
+$('incidentBody').innerHTML=d.incidents.map(r=>`<tr><td>${String(r.incident_date).slice(0,10)}</td><td>${safeText(r.name)}</td><td>${safeText(r.type)}</td><td>${r.justified?'Sí':'No'}</td><td>${safeText(r.notes||'—')}<div style="color:#88b9a9;margin-top:6px">${safeText(r.resolution||'')}</div></td><td><strong style="color:${r.review_status==='cerrada'?'#39c99d':r.review_status==='revisada'?'#8dcfff':'#ffcf36'}">${r.review_status==='cerrada'?'CERRADA EN NÓMINA':r.review_status==='revisada'?'REVISADA':'PENDIENTE'}</strong>${r.review_status!=='cerrada'?`<button class="btn" data-review-incident="${r.id}" style="display:block;margin-top:8px">Revisar</button>`:''}</td></tr>`).join('')||'<tr><td colspan="6">Sin incidencias</td></tr>';
 $('adjustBody').innerHTML=d.adjustments.map(r=>`<tr><td>${String(r.adjust_date).slice(0,10)}</td><td>${r.name}</td><td>${r.type}</td><td>${money(r.amount)}</td><td>${r.reason}</td></tr>`).join('')||'<tr><td colspan="5">Sin movimientos</td></tr>';
 $('bonusTotal').textContent=money(d.adjustments.filter(x=>x.type==='Bono').reduce((a,x)=>a+Number(x.amount),0));$('discountTotal').textContent=money(d.adjustments.filter(x=>x.type==='Descuento').reduce((a,x)=>a+Number(x.amount),0));$('cutsBody').innerHTML=d.cuts.map(r=>`<tr><td>${new Date(r.created_at).toLocaleString('es-MX')}</td><td>${r.name}</td><td>${r.period_type} · ${String(r.start_date).slice(0,10)} a ${String(r.end_date).slice(0,10)}</td><td>${money(r.net_pay)}</td><td><button class="btn green" data-send-cut="${r.id}">WhatsApp + PDF</button></td></tr>`).join('')||'<tr><td colspan="5">Sin cortes</td></tr>';
 ['incidentEmployee','adjustEmployee','payEmployee'].forEach(fillSelect);applyPayDefaults();bindDynamic()}
@@ -393,6 +393,15 @@ async function createPayrollPDF(c){
    if(!daily.length){pdf.text('Sin marcaciones',23,y);y+=5;}
    pdf.text('Minutos propuestos: '+(d.minutes||0)+' | Ajuste sugerido: '+money(d.amount||0),23,y);y+=5;
    if(d.reason){pdf.text('Justificacion: '+String(d.reason).slice(0,90),23,y);y+=5;}
+   for(const incident of (d.incidents||[])){
+    if(y>270){pdf.addPage();y=23;}
+    pdf.text('Incidencia: '+String(incident.type||'')+' - '+String(incident.status||''),23,y);y+=5;
+    const desc=String(incident.resolution||incident.notes||'Sin detalle');
+    const lines=pdf.splitTextToSize('Detalle: '+desc,160);
+    for(const t of lines){if(y>275){pdf.addPage();y=23;}pdf.text(t,23,y);y+=5;}
+    pdf.text('Importe revisado: '+money(incident.amount||0),23,y);y+=5;
+   }
+
    y+=5;
   }
   if(y>265){pdf.addPage();y=23;}
@@ -633,6 +642,19 @@ $('employeeBody').onclick=async e=>{
 };
 $('saveSchedule').onclick=async()=>{try{await adminPost({action:'settings.update',workStart:$('workStart').value,workTolerance:$('workTol').value,foodOut:$('foodOut').value,foodOutTolerance:$('foodOutTol').value,foodIn:$('foodIn').value,foodInTolerance:$('foodInTol').value,workEnd:$('workEnd').value,workEndTolerance:$('workEndTol').value});$('scheduleMsg').innerHTML='<span class="ok">Horarios guardados.</span>';await loadAdmin()}catch(e){$('scheduleMsg').innerHTML='<span class="err">'+e.message+'</span>'}};
 $('saveAdminPin').onclick=async()=>{try{await adminPost({action:'admin.pin',pin:$('adminPin').value.trim()});$('scheduleMsg').innerHTML='<span class="ok">PIN administrador actualizado.</span>';$('adminPin').value=''}catch(e){$('scheduleMsg').innerHTML='<span class="err">'+e.message+'</span>'}};
+$('incidentBody').onclick=async e=>{
+ const b=e.target.closest('[data-review-incident]');if(!b)return;
+ const incident=state.data.incidents.find(x=>Number(x.id)===Number(b.dataset.reviewIncident));if(!incident)return;
+ const resolution=prompt('Motivo y resolución de '+incident.name+' ('+incident.type+', '+String(incident.incident_date).slice(0,10)+'):',incident.resolution||'');
+ if(resolution===null)return;
+ if(!resolution.trim()){alert('Debes escribir la resolución.');return;}
+ const justified=confirm('¿Se justifica esta incidencia?\nAceptar = Sí, sin descuento automático.\nCancelar = No, se revisará el descuento en nómina.');
+ const amountText=prompt('Importe sugerido del ajuste ($). Puedes dejar 0 y revisarlo en el corte:',String(incident.approved_amount||0));
+ if(amountText===null)return;
+ const amount=Number(amountText);
+ if(!Number.isFinite(amount)||amount<0){alert('Monto inválido');return;}
+ try{await adminPost({action:'incident.review',id:incident.id,status:'revisada',resolution:resolution.trim(),justified,amount});await loadAdmin()}catch(err){alert(err.message)}
+};
 $('incidentForm').onsubmit=async e=>{e.preventDefault();await adminPost({action:'incident.create',employeeId:Number($('incidentEmployee').value),date:$('incidentDate').value,type:$('incidentType').value,justified:$('incidentJust').value==='true',notes:$('incidentNotes').value.trim()});e.target.reset();$('incidentDate').value=dISO();await loadAdmin()};
 $('adjustForm').onsubmit=async e=>{e.preventDefault();await adminPost({action:'adjustment.create',employeeId:Number($('adjustEmployee').value),date:$('adjustDate').value,type:$('adjustType').value,amount:Number($('adjustAmount').value),reason:$('adjustReason').value.trim(),notes:$('adjustNotes').value.trim()});e.target.reset();$('adjustDate').value=dISO();await loadAdmin()};
 function payrollISO(raw){
@@ -669,7 +691,8 @@ function renderPayReview(){
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  $('payDays').innerHTML='<table><thead><tr><th>Fecha</th><th>Minutos</th><th>Propuesta</th><th>Revisión / justificación</th></tr></thead><tbody>'+
  rows.map((d,i)=>{
-  let control=esc(d.note);
+  const incidentDetail=(d.incidents||[]).map(i=>'<div style="border-left:2px solid #ffcf36;padding:5px 8px;margin:5px 0"><strong>'+esc(i.type)+'</strong> · '+esc(i.status||'pendiente')+'<div>'+esc(i.notes||'')+'</div><div>'+esc(i.resolution||'Sin revisión administrativa')+'</div>'+(i.amount!=null?'<div>Importe revisado: '+money(i.amount)+'</div>':'')+'</div>').join('');
+  let control=esc(d.note)+(incidentDetail?'<div style="margin-top:8px">'+incidentDetail+'</div>':'');
   if(d.incomplete){
    control='<strong style="color:#ffcf36">PENDIENTE DE REVISIÓN</strong><div style="margin-top:6px"><select data-payday="'+i+'" style="min-width:200px">'+
     '<option value="pendiente"'+(d.decision==='pendiente'?' selected':'')+'>Pendiente de revisión</option>'+
@@ -681,6 +704,7 @@ function renderPayReview(){
   }else if(d.absence){
    control='<select data-payday="'+i+'" style="min-width:185px"><option value="falta"'+(d.decision==='falta'?' selected':'')+'>Falta — descontar</option><option value="justificada"'+(d.decision==='justificada'?' selected':'')+'>Falta justificada — pagar</option><option value="permiso_pagado"'+(d.decision==='permiso_pagado'?' selected':'')+'>Permiso con goce</option><option value="permiso_sin_goce"'+(d.decision==='permiso_sin_goce'?' selected':'')+'>Permiso sin goce</option></select>';
   }
+  control += incidentDetail && (d.incomplete||d.absence)?'<div style="margin-top:8px">'+incidentDetail+'</div>':'';
   return '<tr><td>'+displayDate(d.day)+'</td><td>'+d.minutes+'</td><td>'+money(amountFor(d))+'</td><td>'+control+'</td></tr>';
  }).join('')+'</tbody></table>';
  $('payDays').querySelectorAll('select[data-payday]').forEach(el=>el.onchange=()=>{
@@ -722,6 +746,7 @@ $('calculatePay').onclick=async()=>{try{
 $('payApproved').oninput=()=>{ $('payReviewed').checked=false;updateApprovedPay() };
 $('savePay').onclick=async()=>{
  const p=state.currentPayroll;if(!p)return;
+ if(p.reviewDays.some(d=>(d.incidents||[]).some(i=>i.status==='pendiente'))){alert('Hay incidencias pendientes. Revísalas en Incidencias antes de guardar el corte.');return;}
  if(p.reviewDays.some(d=>d.incomplete&&d.decision==='pendiente')){alert('Hay jornadas incompletas pendientes de revisión. Decide si se pagan, justifican o descuentan antes de guardar.');return;}
  if(p.reviewDays.some(d=>d.incomplete&&d.decision==='justificar_incompleta'&&!String(d.reason||'').trim())){alert('Indica el motivo de las jornadas incompletas justificadas.');return;}
  if(p.reviewDays.some(d=>d.incomplete&&d.decision==='descuento_manual'&&(!Number.isFinite(d.manualAmount)||d.manualAmount<0))){alert('Revisa los descuentos manuales por jornada incompleta.');return;}
