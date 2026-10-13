@@ -48,7 +48,8 @@ export default async function handler(req,res){
         const created=new Date(emp.created_at).toLocaleDateString('sv-SE',{timeZone:'America/Mexico_City'});
         for(let back=0;back<=45;back++){
           const d=new Date(Date.now()-back*86400000),day=d.toLocaleDateString('sv-SE',{timeZone:'America/Mexico_City'});
-          if(day<created||day>=today)continue;
+          if(day<created||day>today)continue;
+          const currentDay=day===today;
           const weekday=new Date(day+'T12:00:00Z').getUTCDay();if(weekday===0||weekday===6)continue;
           const regs=byDay.get(emp.id+'|'+day)||[];
           const entry=regs.find(x=>x.movement==='Entrada laboral');
@@ -61,17 +62,19 @@ export default async function handler(req,res){
           const lunchTol=Number(emp.use_custom_schedule?emp.custom_food_in_tolerance??cfg.food_in_tolerance:cfg.food_in_tolerance);
           const end=minutes(emp.use_custom_schedule&&emp.custom_work_end||cfg.work_end);
           const detected=[];
-          if(!entry&&!exit&&!foodOut&&!foodIn)detected.push(['Falta','No existen marcaciones de la jornada']);
+          if(!entry&&!exit&&!foodOut&&!foodIn){
+            if(!currentDay)detected.push(['Falta','No existen marcaciones de la jornada']);
+          }
           else{
-            if(!entry)detected.push(['Sin entrada laboral','No existe marcación de entrada']);
-            if(!exit)detected.push(['Sin salida laboral','No existe marcación de salida']);
+            if(!entry&&!currentDay)detected.push(['Sin entrada laboral','No existe marcación de entrada']);
+            if(!exit&&!currentDay)detected.push(['Sin salida laboral','No existe marcación de salida']);
             if(entry){
               const arrival=minutes(entry.clock);
-              if(arrival>start+tol)detected.push(['Retardo entrada',`Horario ${cfg.work_start}; marcación ${entry.clock}; ${arrival-start} minutos después de la entrada`]);
+              if(arrival>start+tol)detected.push(['Retardo entrada',`Horario ${String(emp.use_custom_schedule&&emp.custom_work_start||cfg.work_start).slice(0,5)}; marcación ${entry.clock}; ${arrival-start} minutos después de la entrada`]);
               // Si llegó 2 horas tarde, no se exigen movimientos de comida.
               if(arrival<start+120){
-                if(!foodOut)detected.push(['Sin salida comida','Falta marcación de salida a comida']);
-                if(!foodIn)detected.push(['Sin entrada comida','Falta marcación de regreso de comida']);
+                if(!foodOut&&!currentDay)detected.push(['Sin salida comida','Falta marcación de salida a comida']);
+                if(!foodIn&&!currentDay)detected.push(['Sin entrada comida','Falta marcación de regreso de comida']);
               }
             }
             if(foodIn&&minutes(foodIn.clock)>lunch+lunchTol)detected.push(['Retardo comida',`Regreso ${foodIn.clock}; ${minutes(foodIn.clock)-lunch} minutos después de la hora programada`]);
