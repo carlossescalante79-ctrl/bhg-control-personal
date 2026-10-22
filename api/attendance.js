@@ -1,6 +1,6 @@
 import { nextMovement } from './_movement.js';
 import { db } from './_db.js';
-import { hashPin, validSession } from './_auth.js';
+import { hashPin } from './_auth.js';
 
 function timeToMinutes(v) {
   const [h,m] = String(v).slice(0,5).split(':').map(Number);
@@ -88,12 +88,10 @@ export default async function handler(req,res){
     const pin=String(req.body?.pin||'').trim();
     const method=req.body?.method==='QR'?'QR':'Terminal';
     const photo=String(req.body?.photo||'');
-    // La excepción de terminal solo está disponible con sesión de administrador autenticada.
-    const adminTerminal = method==='Terminal' && validSession(req);
-    if (!adminTerminal) {
-      const locationError=validateLocation(req.body?.location);
-      if (locationError) return res.status(403).json({error:locationError});
-    }
+    // GPS obligatorio en todos los movimientos, tanto QR como Terminal.
+    // Una sesión de administrador nunca omite el control de ubicación.
+    const locationError=validateLocation(req.body?.location);
+    if (locationError) return res.status(403).json({error:locationError});
 
     if(photo.length>700000){
       return res.status(413).json({error:'Foto demasiado grande'});
