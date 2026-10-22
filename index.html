@@ -324,7 +324,29 @@ async function api(url,opt={}){const r=await fetch(url,{headers:{'Content-Type':
 $('continueBtn').onclick=async()=>{const pin=$('pinInput').value.trim();$('loginMsg').textContent='Validando…';try{const r=await api('/api/auth',{method:'POST',body:JSON.stringify({pin})});$('pinInput').value='';if(r.role==='admin'){await openAdmin();return}state.employee={...r.employee,pin};state.next=r.next;if(!r.next){$('loginMsg').innerHTML='<span class="err">Tu jornada de hoy ya terminó.</span>';return}renderEmployee();show('employeeView')}catch(e){$('loginMsg').innerHTML='<span class="err">'+e.message+'</span>'}};
 function renderEmployee(){$('empName').textContent=state.employee.name;$('empRole').textContent=state.employee.role||'Empleado';$('moveIcon').textContent=movementIcon(state.next);$('moveName').textContent=state.next.toUpperCase();$('empMsg').textContent='Confirma para registrar '+state.next+'.';$('canvas').style.display='none';$('video').style.display='block'}
 async function photo(){try{const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});const v=$('video'),c=$('canvas');v.srcObject=st;await v.play();await new Promise(r=>setTimeout(r,450));const max=480,scale=Math.min(1,max/(v.videoWidth||640));c.width=Math.round((v.videoWidth||640)*scale);c.height=Math.round((v.videoHeight||480)*scale);c.getContext('2d').drawImage(v,0,0,c.width,c.height);st.getTracks().forEach(t=>t.stop());v.style.display='none';c.style.display='block';return c.toDataURL('image/jpeg',.55)}catch{return ''}}
-$('registerBtn').onclick=async()=>{$('empMsg').textContent='Tomando evidencia y registrando…';const p=await photo();try{const r=await api('/api/attendance',{method:'POST',body:JSON.stringify({pin:state.employee.pin,method:mode,photo:p})});$('successText').textContent=r.employee+' — '+r.record.movement;$('successMeta').textContent=(r.record.status?('Estatus: '+r.record.status+' · '):'')+new Date(r.record.registered_at).toLocaleString('es-MX');show('successView')}catch(e){$('empMsg').innerHTML='<span class="err">'+e.message+'</span>'}};
+function getAttendanceLocation(){
+ return new Promise((resolve,reject)=>{
+  if(!navigator.geolocation){reject(new Error('Tu dispositivo no permite obtener la ubicación.'));return}
+  navigator.geolocation.getCurrentPosition(
+   p=>resolve({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,timestamp:p.timestamp}),
+   e=>reject(new Error(e.code===1?'Activa el permiso de ubicación para registrar asistencia.':e.code===3?'Se agotó el tiempo para obtener GPS. Intenta otra vez.':'No fue posible obtener tu ubicación. Activa GPS e intenta de nuevo.')),
+   {enableHighAccuracy:true,maximumAge:0,timeout:18000}
+  );
+ });
+}
+$('registerBtn').onclick=async()=>{
+ const btn=$('registerBtn');btn.disabled=true;
+ try{
+  $('empMsg').textContent='Comprobando ubicación del taller…';
+  const location=await getAttendanceLocation();
+  $('empMsg').textContent='Tomando evidencia y registrando…';
+  const p=await photo();
+  const r=await api('/api/attendance',{method:'POST',body:JSON.stringify({pin:state.employee.pin,method:mode,photo:p,location})});
+  $('successText').textContent=r.employee+' — '+r.record.movement;
+  $('successMeta').textContent=(r.record.status?('Estatus: '+r.record.status+' · '):'')+new Date(r.record.registered_at).toLocaleString('es-MX');show('successView');
+ }catch(e){$('empMsg').textContent=e.message; $('empMsg').style.color='#ff8e8e';}
+ finally{btn.disabled=false}
+};
 $('cancelBtn').onclick=()=>show('loginView');$('backBtn').onclick=()=>show('loginView');
 $('logoutBtn').onclick=async()=>{await api('/api/auth',{method:'DELETE'});state.data=null;show('loginView')};
 async function openAdmin(){show('adminView');await loadAdmin();}
@@ -355,12 +377,17 @@ function renderIncidentGroups(){
  const statusColor=i=>i.review_status==='cerrada'?'#39c99d':i.review_status==='revisada'?'#8dcfff':'#ffcf36';
  const count=(items)=>items.filter(i=>i.review_status!=='cerrada'&&i.review_status!=='revisada').length;
  const monthName=k=>new Intl.DateTimeFormat('es-MX',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(k+'-01T12:00:00Z'));
+ // Incluir la semana actual aunque no haya incidencias todavía.
+ const today=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Mexico_City'});
+ const currentWeek=monday(today),currentMonth=today.slice(0,7);
+ if(!months.has(currentMonth))months.set(currentMonth,new Map());
+ if(!months.get(currentMonth).has(currentWeek))months.get(currentMonth).set(currentWeek,new Map());
  const all=incidents;
  const sorted=[...months.entries()].sort((a,b)=>b[0].localeCompare(a[0]));
  grouped.innerHTML=`<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin:18px 0"><strong style="color:#ffdf24">Historial de incidencias por mes y semana</strong><span style="color:#9abbb1">${all.length} incidencias · ${count(all)} pendientes</span></div>`+
  (sorted.map(([month,weeks],mi)=>{const monthItems=[...weeks.values()].flatMap(x=>[...x.values()].flat());return `<details ${mi===0?'open':''} style="border:1px solid #245046;border-radius:12px;margin-bottom:12px;padding:12px"><summary style="cursor:pointer;font-weight:800;color:#ffdf24;text-transform:capitalize">${monthName(month)} · ${monthItems.length} incidencias · ${count(monthItems)} pendientes</summary>`+
  [...weeks.entries()].sort((a,b)=>b[0].localeCompare(a[0])).map(([week,emps],wi)=>{const weekItems=[...emps.values()].flat();return `<details ${mi===0&&wi===0?'open':''} style="margin:12px 0 0 8px;padding:10px;border:1px solid #24443c;border-radius:10px"><summary style="cursor:pointer;color:#eaf6f0;font-weight:700">Semana ${fmt(week)} al ${fmt(friday(week))} · ${weekItems.length} casos · ${count(weekItems)} pendientes</summary>`+
- [...emps.entries()].sort((a,b)=>String(a[1][0].name).localeCompare(String(b[1][0].name))).map(([key,items])=>`<details style="margin:10px 0 0 8px;border-top:1px solid #28453d;padding:10px 0"><summary style="cursor:pointer;color:#d3e9df">${safeText(items[0].name)} · ${items.length} incidencias · ${count(items)} pendientes</summary><div style="display:grid;gap:9px;margin-top:10px">${items.sort((a,b)=>iso(b.incident_date).localeCompare(iso(a.incident_date))).map(i=>`<div style="border:1px solid #27473e;border-radius:10px;padding:12px"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><strong>${fmt(iso(i.incident_date))} · ${safeText(i.type)}</strong><strong style="color:${statusColor(i)}">${status(i)}</strong></div><div style="margin-top:7px;color:#b7d1c6">${safeText(i.notes||'Sin observaciones')}</div>${i.resolution?`<div style="margin-top:7px">Resolución: ${safeText(i.resolution)}</div>`:''}<div style="margin-top:7px">Justificada: ${i.justified?'Sí':'No'}${i.approved_amount!=null?' · Ajuste: '+money(i.approved_amount):''}</div>${i.review_status!=='cerrada'?`<button class="btn" data-review-incident="${i.id}" style="margin-top:10px">Revisar / justificar</button>`:''}</div>`).join('')}</div></details>`).join('')+'</details>'}).join('')+'</details>'}).join('')||'<p>Sin incidencias registradas.</p>');
+ [...emps.entries()].sort((a,b)=>String(a[1][0].name).localeCompare(String(b[1][0].name))).map(([key,items])=>`<details style="margin:10px 0 0 8px;border-top:1px solid #28453d;padding:10px 0"><summary style="cursor:pointer;color:#d3e9df">${safeText(items[0].name)} · ${items.length} incidencias · ${count(items)} pendientes</summary><div style="display:grid;gap:9px;margin-top:10px">${items.sort((a,b)=>iso(b.incident_date).localeCompare(iso(a.incident_date))).map(i=>`<div style="border:1px solid #27473e;border-radius:10px;padding:12px"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><strong>${fmt(iso(i.incident_date))} · ${safeText(i.type)}</strong><strong style="color:${statusColor(i)}">${status(i)}</strong></div><div style="margin-top:7px;color:#b7d1c6">${safeText(i.notes||'Sin observaciones')}</div>${i.resolution?`<div style="margin-top:7px">Resolución: ${safeText(i.resolution)}</div>`:''}<div style="margin-top:7px">Justificada: ${i.justified?'Sí':'No'}${i.approved_amount!=null?' · Ajuste: '+money(i.approved_amount):''}</div>${i.review_status!=='cerrada'?`<button class="btn" data-review-incident="${i.id}" style="margin-top:10px">Revisar / justificar</button>`:''}</div>`).join('')}</div></details>`).join('')+(emps.size?'':'<p style="color:#9eb3ad;margin:10px 0 0 8px">Sin incidencias registradas en esta semana.</p>')+'</details>'}).join('')+'</details>'}).join('')||'<p>Sin incidencias registradas.</p>');
 }
 async function createPayrollPDF(c){
  if(!window.jspdf?.jsPDF)throw new Error('No se pudo cargar el generador de PDF. Revisa la conexión a internet.');
