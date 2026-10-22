@@ -1,6 +1,6 @@
 import { nextMovement } from './_movement.js';
 import { db } from './_db.js';
-import { hashPin } from './_auth.js';
+import { hashPin, validSession } from './_auth.js';
 
 function timeToMinutes(v) {
   const [h,m] = String(v).slice(0,5).split(':').map(Number);
@@ -52,6 +52,31 @@ function statusFor(movement, schedule) {
   return null;
 }
 
+// Centro provisional: confirmar el punto exacto en Google Maps antes de desplegar.
+const WORKSHOP_LAT = Number(process.env.BHG_WORKSHOP_LAT || '21.1465383');
+const WORKSHOP_LON = Number(process.env.BHG_WORKSHOP_LON || '-101.6186346');
+const MAX_DISTANCE_METERS = 30;
+const MAX_ACCURACY_METERS = 35;
+const MAX_FIX_AGE_MS = 20000;
+function metersBetween(lat1, lon1, lat2, lon2) {
+  const rad = Math.PI / 180, earth = 6371000;
+  const dlat = (lat2-lat1)*rad, dlon=(lon2-lon1)*rad;
+  const a = Math.sin(dlat/2)**2 + Math.cos(lat1*rad)*Math.cos(lat2*rad)*Math.sin(dlon/2)**2;
+  return 2*earth*Math.asin(Math.min(1,Math.sqrt(a)));
+}
+function validateLocation(location) {
+  const lat=Number(location?.latitude), lon=Number(location?.longitude);
+  const accuracy=Number(location?.accuracy), timestamp=Number(location?.timestamp);
+  if (!location || !Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(accuracy) || !Number.isFinite(timestamp) || Math.abs(lat)>90 || Math.abs(lon)>180 || accuracy<=0) {
+    return 'Se requiere ubicación GPS válida para registrar asistencia.';
+  }
+  if (Math.abs(Date.now()-timestamp)>MAX_FIX_AGE_MS) return 'La ubicación caducó. Intenta nuevamente.';
+  if (accuracy>MAX_ACCURACY_METERS) return `GPS poco preciso (±${Math.round(accuracy)} m). Acércate a un lugar abierto y vuelve a intentar.`;
+  const distance=metersBetween(lat,lon,WORKSHOP_LAT,WORKSHOP_LON);
+  if (distance>MAX_DISTANCE_METERS) return `Registro bloqueado: estás aproximadamente a ${Math.round(distance)} m del taller. Máximo permitido: ${MAX_DISTANCE_METERS} m.`;
+  return null;
+}
+
 export default async function handler(req,res){
   if(req.method!=='POST'){
     return res.status(405).json({error:'POST requerido'});
@@ -63,6 +88,12 @@ export default async function handler(req,res){
     const pin=String(req.body?.pin||'').trim();
     const method=req.body?.method==='QR'?'QR':'Terminal';
     const photo=String(req.body?.photo||'');
+    // La excepción de terminal solo está disponible con sesión de administrador autenticada.
+    const adminTerminal = method==='Terminal' && validSession(req);
+    if (!adminTerminal) {
+      const locationError=validateLocation(req.body?.location);
+      if (locationError) return res.status(403).json({error:locationError});
+    }
 
     if(photo.length>700000){
       return res.status(413).json({error:'Foto demasiado grande'});
