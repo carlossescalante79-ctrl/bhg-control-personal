@@ -71,9 +71,19 @@ function validateLocation(location) {
     return 'Se requiere ubicación GPS válida para registrar asistencia.';
   }
   if (Math.abs(Date.now()-timestamp)>MAX_FIX_AGE_MS) return 'La ubicación caducó. Intenta nuevamente.';
-  if (accuracy>MAX_ACCURACY_METERS) return `GPS poco preciso (±${Math.round(accuracy)} m). Acércate a un lugar abierto y vuelve a intentar.`;
   const distance=metersBetween(lat,lon,WORKSHOP_LAT,WORKSHOP_LON);
-  if (distance>MAX_DISTANCE_METERS) return `Registro bloqueado: estás aproximadamente a ${Math.round(distance)} m del taller. Máximo permitido: ${MAX_DISTANCE_METERS} m.`;
+  // Si incluso descontando el margen de error GPS queda fuera del radio,
+  // podemos indicar que está lejos sin confundir precisión con distancia.
+  if (distance - accuracy > MAX_DISTANCE_METERS) {
+    return `Registro bloqueado: estás fuera del radio permitido de ${MAX_DISTANCE_METERS} metros del taller (distancia aproximada: ${Math.round(distance)} m).`;
+  }
+  // Nunca autorizar una marcación basada en una lectura imprecisa.
+  if (accuracy>MAX_ACCURACY_METERS) {
+    return `No se pudo verificar que estés dentro de los ${MAX_DISTANCE_METERS} metros del taller. GPS poco preciso (±${Math.round(accuracy)} m). Intenta nuevamente en un lugar abierto.`;
+  }
+  if (distance>MAX_DISTANCE_METERS) {
+    return `Registro bloqueado: estás fuera del radio permitido de ${MAX_DISTANCE_METERS} metros del taller (distancia aproximada: ${Math.round(distance)} m).`;
+  }
   return null;
 }
 
