@@ -1,5 +1,6 @@
 import { db } from './_db.js';
 import { hashPin, validSession } from './_auth.js';
+import { encryptPin, decryptPin } from './_pin_vault.js';
 
 function requireAdmin(req,res){
   if(!validSession(req)){
@@ -15,6 +16,7 @@ export default async function handler(req,res){
 
   try{
     await sql`ALTER TABLE employees ADD COLUMN IF NOT EXISTS phone TEXT`;
+    await sql`ALTER TABLE employees ADD COLUMN IF NOT EXISTS pin_cipher TEXT`;
     await sql`CREATE TABLE IF NOT EXISTS attendance_corrections (
       id BIGSERIAL PRIMARY KEY, attendance_id BIGINT NOT NULL,
       original_movement TEXT NOT NULL, corrected_movement TEXT NOT NULL,
@@ -124,6 +126,18 @@ export default async function handler(req,res){
 
     const a=req.body?.action;
 
+    if(a==='employee.pin.view'){
+      const id=Number(req.body?.id), adminPin=String(req.body?.adminPin||'').trim();
+      if(!Number.isInteger(id)||id<=0 || !/^\d{4,6}$/.test(adminPin)) return res.status(400).json({error:'Datos inválidos'});
+      const [settings]=await sql`SELECT admin_pin_hash FROM settings WHERE id=1`;
+      if(!settings || settings.admin_pin_hash!==hashPin(adminPin)) return res.status(403).json({error:'PIN de administrador incorrecto'});
+      const [emp]=await sql`SELECT pin_cipher FROM employees WHERE id=${id}`;
+      if(!emp) return res.status(404).json({error:'Empleado no encontrado'});
+      if(!emp.pin_cipher) return res.status(409).json({error:'El PIN anterior no se puede consultar porque se guardó como hash. Asigna un PIN nuevo una sola vez; después podrás verlo con Mostrar PIN.'});
+      try { return res.json({pin:decryptPin(emp.pin_cipher)}); }
+      catch { return res.status(500).json({error:'No se pudo descifrar el PIN. Verifica PIN_VAULT_KEY en Vercel.'}); }
+    }
+
     if(a==='employee.create'){
       const {
         name,role,phone,pin,payType,salary,
@@ -152,7 +166,7 @@ export default async function handler(req,res){
 
       await sql`
         INSERT INTO employees(
-          name,role,phone,pin_hash,pay_type,salary,
+          name,role,phone,pin_hash,pin_cipher,pay_type,salary,
           use_custom_schedule,
           custom_work_start,custom_work_tolerance,
           custom_food_out,custom_food_out_tolerance,
@@ -164,6 +178,7 @@ export default async function handler(req,res){
           ${String(role||'').trim()||null},
           ${cleanPhone||null},
           ${hashPin(String(pin))},
+          ${encryptPin(String(pin))},
           ${payType==='Quincenal'?'Quincenal':'Semanal'},
           ${Number(salary)},
           ${custom},
@@ -216,6 +231,7 @@ export default async function handler(req,res){
       }
 
       const pinHash=pin?hashPin(pin):null;
+      const pinCipher=pin?encryptPin(pin):null;
 
       await sql`
         UPDATE employees
@@ -234,7 +250,8 @@ export default async function handler(req,res){
           custom_food_in_tolerance=${custom?Number(req.body.customFoodInTolerance||0):null},
           custom_work_end=${custom?req.body.customWorkEnd:null},
           custom_work_end_tolerance=${custom?Number(req.body.customWorkEndTolerance||0):null},
-          pin_hash=CASE WHEN ${pinHash}::text IS NULL THEN pin_hash ELSE ${pinHash} END
+          pin_hash=CASE WHEN ${pinHash}::text IS NULL THEN pin_hash ELSE ${pinHash} END,
+          pin_cipher=CASE WHEN ${pinCipher}::text IS NULL THEN pin_cipher ELSE ${pinCipher} END
         WHERE id=${id}
       `;
 

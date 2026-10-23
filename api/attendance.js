@@ -52,41 +52,6 @@ function statusFor(movement, schedule) {
   return null;
 }
 
-// Centro provisional: confirmar el punto exacto en Google Maps antes de desplegar.
-const WORKSHOP_LAT = Number(process.env.BHG_WORKSHOP_LAT || '21.1465383');
-const WORKSHOP_LON = Number(process.env.BHG_WORKSHOP_LON || '-101.6186346');
-const MAX_DISTANCE_METERS = 30;
-const MAX_ACCURACY_METERS = 35;
-const MAX_FIX_AGE_MS = 20000;
-function metersBetween(lat1, lon1, lat2, lon2) {
-  const rad = Math.PI / 180, earth = 6371000;
-  const dlat = (lat2-lat1)*rad, dlon=(lon2-lon1)*rad;
-  const a = Math.sin(dlat/2)**2 + Math.cos(lat1*rad)*Math.cos(lat2*rad)*Math.sin(dlon/2)**2;
-  return 2*earth*Math.asin(Math.min(1,Math.sqrt(a)));
-}
-function validateLocation(location) {
-  const lat=Number(location?.latitude), lon=Number(location?.longitude);
-  const accuracy=Number(location?.accuracy), timestamp=Number(location?.timestamp);
-  if (!location || !Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(accuracy) || !Number.isFinite(timestamp) || Math.abs(lat)>90 || Math.abs(lon)>180 || accuracy<=0) {
-    return 'Se requiere ubicación GPS válida para registrar asistencia.';
-  }
-  if (Math.abs(Date.now()-timestamp)>MAX_FIX_AGE_MS) return 'La ubicación caducó. Intenta nuevamente.';
-  const distance=metersBetween(lat,lon,WORKSHOP_LAT,WORKSHOP_LON);
-  // Si incluso descontando el margen de error GPS queda fuera del radio,
-  // podemos indicar que está lejos sin confundir precisión con distancia.
-  if (distance - accuracy > MAX_DISTANCE_METERS) {
-    return `Registro bloqueado: estás fuera del radio permitido de ${MAX_DISTANCE_METERS} metros del taller (distancia aproximada: ${Math.round(distance)} m).`;
-  }
-  // Nunca autorizar una marcación basada en una lectura imprecisa.
-  if (accuracy>MAX_ACCURACY_METERS) {
-    return `No se pudo verificar que estés dentro de los ${MAX_DISTANCE_METERS} metros del taller. GPS poco preciso (±${Math.round(accuracy)} m). Intenta nuevamente en un lugar abierto.`;
-  }
-  if (distance>MAX_DISTANCE_METERS) {
-    return `Registro bloqueado: estás fuera del radio permitido de ${MAX_DISTANCE_METERS} metros del taller (distancia aproximada: ${Math.round(distance)} m).`;
-  }
-  return null;
-}
-
 export default async function handler(req,res){
   if(req.method!=='POST'){
     return res.status(405).json({error:'POST requerido'});
@@ -98,11 +63,10 @@ export default async function handler(req,res){
     const pin=String(req.body?.pin||'').trim();
     const method=req.body?.method==='QR'?'QR':'Terminal';
     const photo=String(req.body?.photo||'');
-    // GPS obligatorio en todos los movimientos, tanto QR como Terminal.
-    // Una sesión de administrador nunca omite el control de ubicación.
-    const locationError=validateLocation(req.body?.location);
-    if (locationError) return res.status(403).json({error:locationError});
 
+    if(!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(photo)){
+      return res.status(400).json({error:'La fotografía es obligatoria. Permite acceso a la cámara e intenta de nuevo.'});
+    }
     if(photo.length>700000){
       return res.status(413).json({error:'Foto demasiado grande'});
     }
