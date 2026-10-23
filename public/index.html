@@ -247,7 +247,7 @@
 
 <section id="employeeView" class="card terminal hidden">
   <img class="heroLogo" src="/bhg_logo.jpg" alt="BHG"><small>Empleado identificado</small><h2 id="empName">—</h2><small id="empRole">—</small>
-  <div class="moveBox"><small>TU SIGUIENTE MOVIMIENTO</small><div class="moveIcon" id="moveIcon">🟢</div><h2 id="moveName">ENTRADA LABORAL</h2></div>
+  <div class="note" id="identityConfirmation" style="margin-bottom:12px">Confirma que eres el empleado indicado antes de continuar.</div><div class="moveBox"><small>TU SIGUIENTE MOVIMIENTO</small><div class="moveIcon" id="moveIcon">🟢</div><h2 id="moveName">ENTRADA LABORAL</h2></div>
   <div class="camera"><video id="video" playsinline muted></video><canvas id="canvas"></canvas><small>Se tomará una foto como evidencia al registrar.</small></div>
   <button id="registerBtn" class="btn green big">REGISTRAR</button><button id="cancelBtn" class="btn big" style="margin-top:8px">Cancelar</button>
   <div id="empMsg" class="note">Confirma para registrar.</div>
@@ -266,7 +266,7 @@
 
 <div id="tab-registros" class="adminTab hidden"><div class="sectionTitle"><h2>Registros</h2><p>Por mes, semana laboral y empleado. Correcciones exclusivas del administrador.</p></div><div class="panel"><div class="formGrid"><div><label>Mes</label><input id="attendanceMonth" type="month"></div><div><label>Empleado</label><select id="attendanceEmployee"><option value="">Todos los empleados</option></select></div></div><div id="attendanceWeeks"></div></div></div>
 
-<div id="tab-empleados" class="adminTab hidden"><div class="sectionTitle"><h2>Empleados</h2><p>Alta, edición, sueldo y estatus.</p></div><div class="grid"><div class="panel c6"><form id="employeeForm" class="formGrid"><div><label>Nombre</label><input id="newName" required></div><div><label>Puesto</label><input id="newRole"></div><div><label>Celular / WhatsApp</label><input id="newPhone" type="tel" placeholder="4771234567"></div><div><label>Tipo de pago</label><select id="newPayType"><option>Semanal</option><option>Quincenal</option></select></div><div><label>Sueldo base</label><input id="newSalary" type="number" min="0" step="0.01" required></div><div><label>PIN</label><input id="newPin" inputmode="numeric" maxlength="6" required></div>
+<div id="tab-empleados" class="adminTab hidden"><div class="sectionTitle"><h2>Empleados</h2><p>Alta, edición, sueldo y estatus.</p></div><div class="grid"><div class="panel c6"><form id="employeeForm" class="formGrid"><div><label>Nombre</label><input id="newName" required></div><div><label>Puesto</label><input id="newRole"></div><div><label>Celular / WhatsApp</label><input id="newPhone" type="tel" placeholder="4771234567"></div><div><label>Tipo de pago</label><select id="newPayType"><option>Semanal</option><option>Quincenal</option></select></div><div><label>Sueldo base</label><input id="newSalary" type="number" min="0" step="0.01" required></div><div><label>PIN</label><input id="newPin" inputmode="numeric" maxlength="6" required><button id="showEmployeePin" type="button" class="btn hidden" style="margin-top:8px">👁 Mostrar PIN (administrador)</button></div>
 <div class="full"><label>Horario</label><select id="useCustomSchedule"><option value="false">Usar horario general</option><option value="true">Usar horario personalizado</option></select></div>
 <div id="customScheduleBox" class="full hidden" style="border:1px solid var(--line);border-radius:12px;padding:12px;background:#061411">
   <div style="font-weight:900;margin-bottom:8px">Horario personalizado</div>
@@ -321,33 +321,47 @@ function tick(){$('clock').textContent=new Intl.DateTimeFormat('es-MX',{dateStyl
 $('modeLabel').textContent=mode==='QR'?'Registro por QR':'Terminal de asistencia';$('loginTitle').textContent=mode==='QR'?'Registro por QR':'Terminal BHG';$('loginSubtitle').textContent=mode==='QR'?'Escaneaste el QR fijo del taller':'Empleado o administrador: ingresa tu PIN';
 function show(id){['loginView','employeeView','successView','adminView'].forEach(x=>$(x).classList.add('hidden'));$(id).classList.remove('hidden')}
 async function api(url,opt={}){const r=await fetch(url,{headers:{'Content-Type':'application/json',...(opt.headers||{})},...opt});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Error');return j}
-$('continueBtn').onclick=async()=>{const pin=$('pinInput').value.trim();$('loginMsg').textContent='Validando…';try{const r=await api('/api/auth',{method:'POST',body:JSON.stringify({pin})});$('pinInput').value='';if(r.role==='admin'){await openAdmin();return}state.employee={...r.employee,pin};state.next=r.next;if(!r.next){$('loginMsg').innerHTML='<span class="err">Tu jornada de hoy ya terminó.</span>';return}renderEmployee();show('employeeView')}catch(e){$('loginMsg').innerHTML='<span class="err">'+e.message+'</span>'}};
+function clearEmployeeSession(){
+ state.employee=null;state.next=null;
+ $('pinInput').value='';$('empMsg').style.color='';
+ $('canvas').style.display='none';$('video').style.display='block';
+ const v=$('video');if(v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null;}
+}
+function returnToPin(){clearEmployeeSession();$('loginMsg').textContent='Ingresa tu PIN para continuar.';show('loginView')}
+$('continueBtn').onclick=async()=>{
+ const pin=$('pinInput').value.trim();clearEmployeeSession();
+ $('loginMsg').textContent='Validando…';
+ try{
+  const r=await api('/api/auth',{method:'POST',body:JSON.stringify({pin})});
+  if(r.role==='admin'){await openAdmin();return}
+  if(!r.next){$('loginMsg').textContent='La jornada de hoy ya terminó.';return}
+  // No reutilizar nunca la identidad del teléfono: el PIN identifica al empleado.
+  if(!confirm('Empleado identificado: '+r.employee.name+'\n\n¿Eres '+r.employee.name+'?')){returnToPin();return}
+  state.employee={...r.employee,pin};state.next=r.next;
+  renderEmployee();show('employeeView');
+ }catch(e){clearEmployeeSession();$('loginMsg').textContent=e.message}
+};
 function renderEmployee(){$('empName').textContent=state.employee.name;$('empRole').textContent=state.employee.role||'Empleado';$('moveIcon').textContent=movementIcon(state.next);$('moveName').textContent=state.next.toUpperCase();$('empMsg').textContent='Confirma para registrar '+state.next+'.';$('canvas').style.display='none';$('video').style.display='block'}
 async function photo(){try{const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});const v=$('video'),c=$('canvas');v.srcObject=st;await v.play();await new Promise(r=>setTimeout(r,450));const max=480,scale=Math.min(1,max/(v.videoWidth||640));c.width=Math.round((v.videoWidth||640)*scale);c.height=Math.round((v.videoHeight||480)*scale);c.getContext('2d').drawImage(v,0,0,c.width,c.height);st.getTracks().forEach(t=>t.stop());v.style.display='none';c.style.display='block';return c.toDataURL('image/jpeg',.55)}catch{return ''}}
-function getAttendanceLocation(){
- return new Promise((resolve,reject)=>{
-  if(!navigator.geolocation){reject(new Error('Tu dispositivo no permite obtener la ubicación.'));return}
-  navigator.geolocation.getCurrentPosition(
-   p=>resolve({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,timestamp:p.timestamp}),
-   e=>reject(new Error(e.code===1?'Activa el permiso de ubicación para registrar asistencia.':e.code===3?'Se agotó el tiempo para obtener GPS. Intenta otra vez.':'No fue posible obtener tu ubicación. Activa GPS e intenta de nuevo.')),
-   {enableHighAccuracy:true,maximumAge:0,timeout:18000}
-  );
- });
-}
 $('registerBtn').onclick=async()=>{
- const btn=$('registerBtn');btn.disabled=true;
+ const btn=$('registerBtn');if(!state.employee||!state.next)returnToPin();
+ if(!state.employee||!state.next)return;
+ const name=state.employee.name, movement=state.next;
+ if(!confirm('¿Confirmas este registro?\n\nEmpleado: '+name+'\nMovimiento: '+movement))return;
+ btn.disabled=true;
  try{
-  $('empMsg').textContent='Comprobando ubicación del taller…';
-  const location=await getAttendanceLocation();
-  $('empMsg').textContent='Tomando evidencia y registrando…';
+  $('empMsg').textContent='Tomando fotografía y registrando…';
   const p=await photo();
-  const r=await api('/api/attendance',{method:'POST',body:JSON.stringify({pin:state.employee.pin,method:mode,photo:p,location})});
+  if(!p)throw new Error('No se pudo tomar la fotografía. Autoriza el uso de la cámara e intenta nuevamente.');
+  const r=await api('/api/attendance',{method:'POST',body:JSON.stringify({pin:state.employee.pin,method:mode,photo:p})});
   $('successText').textContent=r.employee+' — '+r.record.movement;
-  $('successMeta').textContent=(r.record.status?('Estatus: '+r.record.status+' · '):'')+new Date(r.record.registered_at).toLocaleString('es-MX');show('successView');
- }catch(e){$('empMsg').textContent=e.message; $('empMsg').style.color='#ff8e8e';}
+  $('successMeta').textContent=(r.record.status?('Estatus: '+r.record.status+' · '):'')+new Date(r.record.registered_at).toLocaleString('es-MX');
+  clearEmployeeSession();show('successView');
+ }catch(e){$('empMsg').textContent=e.message;$('empMsg').style.color='#ff8e8e';}
  finally{btn.disabled=false}
 };
-$('cancelBtn').onclick=()=>show('loginView');$('backBtn').onclick=()=>show('loginView');
+$('cancelBtn').onclick=returnToPin;
+$('backBtn').onclick=returnToPin;
 $('logoutBtn').onclick=async()=>{await api('/api/auth',{method:'DELETE'});state.data=null;show('loginView')};
 async function openAdmin(){show('adminView');await loadAdmin();}
 async function loadAdmin(){try{state.data=await api('/api/admin');renderAdmin()}catch(e){alert(e.message);show('loginView')}}
@@ -550,6 +564,7 @@ async function adminPost(body){return api('/api/admin',{method:'POST',body:JSON.
 function resetEmployeeForm(){
   state.editingEmployeeId=null;
   $('employeeForm').reset();
+  $('showEmployeePin').classList.add('hidden');
   $('newPin').required=true;
   $('newPin').placeholder='';
   $('employeeSubmit').textContent='Agregar empleado';
@@ -579,6 +594,15 @@ $('useCustomSchedule').onchange=()=>{
 };
 
 $('employeeCancelEdit').onclick=resetEmployeeForm;
+$('showEmployeePin').onclick=async()=>{
+ const id=Number(state.editingEmployeeId);if(!id)return;
+ const adminPin=prompt('Por seguridad, ingresa tu PIN de administrador para consultar el PIN del empleado:');
+ if(adminPin===null)return;
+ try{
+  const r=await adminPost({action:'employee.pin.view',id,adminPin});
+  alert('PIN del empleado: '+r.pin+'\n\nNo compartas este código con otras personas.');
+ }catch(e){alert(e.message)}
+};
 
 $('employeeForm').onsubmit=async e=>{
   e.preventDefault();
@@ -645,6 +669,7 @@ $('employeeBody').onclick=async e=>{
     $('customWorkEnd').value=emp.custom_work_end?String(emp.custom_work_end).slice(0,5):'';
     $('customWorkEndTol').value=emp.custom_work_end_tolerance ?? 10;
     $('newPin').value='';
+    $('showEmployeePin').classList.remove('hidden');
     $('newPin').required=false;
     $('newPin').placeholder='Déjalo vacío para conservarlo';
     $('employeeSubmit').textContent='Guardar cambios';
