@@ -1,6 +1,7 @@
 import { db } from './_db.js';
 import { hashPin, validSession } from './_auth.js';
 import { encryptPin, decryptPin } from './_pin_vault.js';
+import { requestIp, ensureNetworkTables } from './_network.js';
 
 function requireAdmin(req,res){
   if(!validSession(req)){
@@ -15,6 +16,7 @@ export default async function handler(req,res){
   const sql=db();
 
   try{
+    await ensureNetworkTables(sql);
     await sql`ALTER TABLE employees ADD COLUMN IF NOT EXISTS phone TEXT`;
     await sql`ALTER TABLE employees ADD COLUMN IF NOT EXISTS pin_cipher TEXT`;
     await sql`CREATE TABLE IF NOT EXISTS attendance_corrections (
@@ -110,7 +112,10 @@ export default async function handler(req,res){
         sql`SELECT * FROM attendance_corrections ORDER BY corrected_at DESC LIMIT 1000`
       ]);
 
+      const [networkPolicy]=await sql`SELECT mode,ipv4,ipv6,updated_at FROM attendance_network_policy WHERE id=1`;
+      const networkAttempts=await sql`SELECT a.id,a.attempted_ip,a.reason,a.mode,a.created_at,e.name FROM attendance_network_attempts a LEFT JOIN employees e ON e.id=a.employee_id ORDER BY a.id DESC LIMIT 50`;
       return res.json({
+        network:{...networkPolicy,currentIp:requestIp(req),attempts:networkAttempts},
         settings:settings[0],
         employees,
         attendance,
@@ -125,6 +130,17 @@ export default async function handler(req,res){
     }
 
     const a=req.body?.action;
+
+    if(a==='network.update'){
+      const mode=String(req.body?.mode||'');
+      const ipv4=String(req.body?.ipv4||'').trim();
+      const ipv6=String(req.body?.ipv6||'').trim().toLowerCase();
+      const net=await import('node:net');
+      if(!['monitor','enforce'].includes(mode)||net.isIP(ipv4)!==4||(ipv6&&net.isIP(ipv6)!==6))
+        return res.status(400).json({error:'Indica una IPv4 válida, una IPv6 opcional y un modo válido.'});
+      await sql`UPDATE attendance_network_policy SET mode=${mode},ipv4=${ipv4},ipv6=${ipv6},updated_at=NOW() WHERE id=1`;
+      return res.json({ok:true});
+    }
 
     if(a==='employee.pin.view'){
       const id=Number(req.body?.id), adminPin=String(req.body?.adminPin||'').trim();

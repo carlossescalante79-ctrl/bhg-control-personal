@@ -1,6 +1,7 @@
 import { nextMovement } from './_movement.js';
 import { db } from './_db.js';
 import { hashPin } from './_auth.js';
+import { requestIp, ensureNetworkTables, networkAllowed } from './_network.js';
 
 function timeToMinutes(v) {
   const [h,m] = String(v).slice(0,5).split(':').map(Number);
@@ -91,6 +92,18 @@ export default async function handler(req,res){
 
     if(!emp[0]){
       return res.status(401).json({error:'PIN incorrecto'});
+    }
+
+    // Se verifica en el servidor, después de identificar al empleado y antes de registrar.
+    await ensureNetworkTables(sql);
+    const [policy]=await sql`SELECT mode,ipv4,ipv6 FROM attendance_network_policy WHERE id=1`;
+    const clientIp=requestIp(req);
+    if(!networkAllowed(clientIp,policy)){
+      await sql`INSERT INTO attendance_network_attempts(employee_id,attempted_ip,reason,mode)
+        VALUES(${emp[0].id},${clientIp||null},${'Conexión fuera de la red autorizada'},${policy.mode})`;
+      if(policy.mode==='enforce'){
+        return res.status(403).json({error:'Conéctate al Wi-Fi de BHG Medina para registrar tu asistencia. Si ya estás conectado, avisa al administrador.'});
+      }
     }
 
     const next=await nextMovement(sql,emp[0].id);
